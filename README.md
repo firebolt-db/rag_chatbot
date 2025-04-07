@@ -68,3 +68,7 @@ This repository contains code and instructions for running your own Firebolt-pow
 
 ## Things you must do to prevent execution errors:
 - Make sure that every Markdown file in your documents has valid Markdown syntax. If there is a Markdown file with invalid syntax (e.g., not closing parentheses), the Firebolt SDK will throw an error when you try to insert that document into the table. 
+
+# Example Dataset
+
+We have provided an example dataset that you can use to build your chatbot! You can find the dataset at [this GitHub repository](https://github.com/firebolt-analytics/rag_dataset), and it contains documentation for HuggingFace Transformers.
