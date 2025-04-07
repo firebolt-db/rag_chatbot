@@ -2,16 +2,16 @@
 This repository contains code and instructions for running your own Firebolt-powered chatbot that uses retrieval-augmented generation (RAG).
 
 # Prerequisites before setting up your chatbot
-1. (Register for Firebolt)[https://docs.firebolt.io/Guides/getting-started/index.html]
-2. Create a database by following the instructions under the "Create a Database" section (here)[https://docs.firebolt.io/Guides/getting-started/get-started-sql.html]
-3. After you've created the database, Firebolt may have automatically created an engine called `my_engine`. If so, then you can use that engine to programatically access Firebolt. If not, then create an engine by following the instructions under the "Create an Engine" section (here)[https://docs.firebolt.io/Guides/getting-started/get-started-sql.html].
-4. Follow (these instructions)[https://docs.firebolt.io/Guides/managing-your-organization/managing-accounts.html] to obtain the name of the account that Firebolt has prepared for you, or to create a new account if you would like to.
-5. To set up your service account, follow the sections "Create a service account", "Get a service account ID", "Generate a secret", and "Create a user" under (these instructions)[https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html] 
+1. [Register for Firebolt](https://docs.firebolt.io/Guides/getting-started/index.html)
+2. Create a database by following the instructions under the "Create a Database" section [here](https://docs.firebolt.io/Guides/getting-started/get-started-sql.html)
+3. After you've created the database, Firebolt may have automatically created an engine called `my_engine`. If so, then you can use that engine to programatically access Firebolt. If not, then create an engine by following the instructions under the "Create an Engine" section [here](https://docs.firebolt.io/Guides/getting-started/get-started-sql.html).
+4. Follow [these instructions](https://docs.firebolt.io/Guides/managing-your-organization/managing-accounts.html) to obtain the name of the account that Firebolt has prepared for you, or to create a new account if you would like to.
+5. To set up your service account, follow the sections "Create a service account", "Get a service account ID", "Generate a secret", and "Create a user" under [these instructions](https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html)
     - It doesn't matter whether you designate the service account as an organization admin using the `Is organization admin?` toggle switch.
     - The instructions for creating a user are slightly different from the ones in the "Create a user" section on the website. Here are the differences:
         - The button in step 3 of those instructions is called `Create New User`
         - In step 4 of those instructions, to associate the user with a service account, select `Service Account` in the `Assign To` dropdown menu. Now, in the `Service account name` dropdown menu, select your service account. When selecting a role using the `Role` dropdown menu, you must select the `account_admin` role. It doesn't matter whether you associate the user with your engine and your database.
-6. Optional: If you plan to use Firebolt after you've used up your initial free $200 credit, you may follow the instructions under the "Register through the AWS Marketplace" section (here)[https://docs.firebolt.io/Guides/getting-started/get-started-next.html]
+6. Optional: If you plan to use Firebolt after you've used up your initial free $200 credit, you may follow the instructions under the "Register through the AWS Marketplace" section [here](https://docs.firebolt.io/Guides/getting-started/get-started-next.html)
 
 # How to set up and use your chatbot
 1. Make sure the machine where you're running this code has a GPU and that the GPU is being utilized. This is necessary for the chatbot to run quickly. Many local computers have GPUs, but if yours does not, you can host this code on an AWS EC2 instance with a GPU for faster runtime. The instructions below assume you're using your local machine.
@@ -56,7 +56,7 @@ This repository contains code and instructions for running your own Firebolt-pow
 - In your documents, be careful about special character sequences that cannot be loaded into Firebolt tables:
     - Documents that contain the null character cannot be read into Firebolt tables. This is because Firebolt tables cannot contain escape string literals with null characters in them. If any of your documents contain a null character, the code for populating the table will throw an error. To add those documents to the table, you must manually remove every occurrence of the null character from the documents.
     - If your documents contain Unicode character values, hexadecimal byte values, or octal byte values, make sure these characters are valid in Firebolt. If they are not valid, the code for populating the table will throw an error. To add those documents to the table, you must manually change the invalid characters to valid ones. 
-        - See (this link)[https://docs.firebolt.io/sql_reference/data-types.html#text] for information about what constitutes a valid Unicode, hexadecimal, or octal character.
+        - See [this link](https://docs.firebolt.io/sql_reference/data-types.html#text) for information about what constitutes a valid Unicode, hexadecimal, or octal character.
 
 ## Things to note about the code
 - If a document contains images, those images will not be read into the Firebolt table or used by the chatbot.
