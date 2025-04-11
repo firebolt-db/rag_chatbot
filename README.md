@@ -34,6 +34,7 @@ This repository contains code and instructions for running your own Firebolt-pow
 8. Populate the Firebolt table with the documents you will use for RAG:
     - Put the documents in one or more GitHub repositories. Clone ALL of those repositories to your local machine.
     - Go to `constants.py` and set the `LOCAL_GITHUB_PATH` variable to the path to GitHub on your local machine. There must be no spaces in the string value of `LOCAL_GITHUB_PATH`
+    - Optionally, you may specify files that you want the code for reading documents from the GitHub repos to ignore. To do so, go to `constants.py` and add the names of those files to the `DISALLOWED_FILENAMES` variable. For example, you might not want the README or the license to be in the Firebolt table. 
     - Go to `populate_table.py` and do the following:
         - In the main method, set the `chunking_strategies` variable to a list of one or more chunking strategies that you want to use to chunk the documents.
         - If needed, you may change the `batch_size`, `rcts_chunk_size`, `rcts_chunk_overlap`, `num_words_per_chunk`, and/or `num_sentences_per_chunk` arguments in the call to `generate_embeddings_and_populate_table()` 
