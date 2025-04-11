@@ -13,7 +13,7 @@ This repository contains code and instructions for running your own Firebolt-pow
         - In step 4 of those instructions, to associate the user with a service account, select `Service Account` in the `Assign To` dropdown menu. Now, in the `Service account name` dropdown menu, select your service account. When selecting a role using the `Role` dropdown menu, you must select the `account_admin` role. It doesn't matter whether you associate the user with your engine and your database.
 6. Optional: If you plan to use Firebolt after you've used up your initial free $200 credit, you may follow the instructions under the "Register through the AWS Marketplace" section [here](https://docs.firebolt.io/Guides/getting-started/get-started-next.html)
 7. Make sure the machine where you're running this code has a GPU and that the GPU is being utilized. This is necessary for the chatbot to run quickly. Many local computers have GPUs, but if yours does not, you can host this code on an AWS EC2 instance with a GPU for faster runtime. The instructions below assume you're using your local machine.
-8. Download Python 3.12.7 to your local machine, if it's not already downloaded
+8. Download Python 3.12 to your local machine, if it's not already downloaded
    
 # How to set up and use your chatbot
 1. Clone this GitHub repository to your local machine, and open the repository in Visual Studio Code
