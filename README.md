@@ -12,13 +12,13 @@ This repository contains code and instructions for running your own Firebolt-pow
         - The button in step 3 of those instructions is called `Create New User`
         - In step 4 of those instructions, to associate the user with a service account, select `Service Account` in the `Assign To` dropdown menu. Now, in the `Service account name` dropdown menu, select your service account. When selecting a role using the `Role` dropdown menu, you must select the `account_admin` role. It doesn't matter whether you associate the user with your engine and your database.
 6. Optional: If you plan to use Firebolt after you've used up your initial free $200 credit, you may follow the instructions under the "Register through the AWS Marketplace" section [here](https://docs.firebolt.io/Guides/getting-started/get-started-next.html)
-
+7. Make sure the machine where you're running this code has a GPU and that the GPU is being utilized. This is necessary for the chatbot to run quickly. Many local computers have GPUs, but if yours does not, you can host this code on an AWS EC2 instance with a GPU for faster runtime. The instructions below assume you're using your local machine.
+8. Download Python 3.12.7 to your local machine, if it's not already downloaded
+   
 # How to set up and use your chatbot
-1. Make sure the machine where you're running this code has a GPU and that the GPU is being utilized. This is necessary for the chatbot to run quickly. Many local computers have GPUs, but if yours does not, you can host this code on an AWS EC2 instance with a GPU for faster runtime. The instructions below assume you're using your local machine.
-2. Download Python 3.12.7 to your local machine
-3. Clone this GitHub repository to your local machine
-4. Create a `.venv` virtual environment to run this project in
-5. Download Ollama [here](https://ollama.com/download)
+1. Clone this GitHub repository to your local machine, and open the repository in Visual Studio Code
+3. In Visual Studio Code, create a `.venv` virtual environment to run this project in
+4. Download Ollama [here](https://ollama.com/download)
 5. In your terminal, run `ollama pull llama3.1`. Then run `ollama pull nomic-embed-text`
 6. Activate the virtual environment. Inside the virtual environment, run the following command to install all the required libraries: 
 `pip install torch pydriller GitPython mistletoe bs4 langchain-community numpy langchain langchain-experimental nltk langchain-ollama uuid python-docx pandas langchain-core firebolt-sdk python-dotenv transformers flask`
@@ -61,7 +61,7 @@ This repository contains code and instructions for running your own Firebolt-pow
 ## Things to note about the code
 - If a document contains images, those images will not be read into the Firebolt table or used by the chatbot.
 - Only documentation files with the following extensions are supported: `.docx`, `.txt`, `.md`.
-- The documents in a repo must be either ALL internal or ALL user-facing. If one repo has both internal and external docs, then every time after you run `populate_table.py`, you will have to write a Firebolt SQL query to manually change the values in the `internal_only` column where appropriate.
+- The documents in each GitHub repository must be either ALL internal or ALL user-facing. If one repo has both internal and user-facing documents, then every time after you run `populate_table.py`, you will have to write and run a Firebolt SQL query to manually change the values in the `internal_only` column where appropriate.
 - This code does not detect if the chatbot user is an employee of your organization or an external user. The code assumes the user is an employee. Therefore, internal documents can be passed to the chatbot. If the user of your chatbot is a customer, you will have to change the code manually:
     - Go to `web_server.py`
     - In the `run_chatbot` function, change the value of the `is_customer` argument from `False` to `True`.
