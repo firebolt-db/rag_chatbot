@@ -190,7 +190,7 @@ def vector_search(question: str, k: int, chunking_strategy: str,
     order = "DESC" if (similarity_function == "VECTOR_INNER_PRODUCT" or similarity_function == "VECTOR_COSINE_SIMILARITY") else "ASC"
 
     # Select the top k rows that are the most similar to the question vector. If the user is a customer, search only non-internal docs
-    query = f"""SELECT {CHUNK_CONTENT_COL}, 
+    query = f"""SELECT DISTINCT {CHUNK_CONTENT_COL}, 
                        {similarity_function}({question_vector}, {EMBEDDING_COL}), 
                        {DOC_NAME_COL}
                 FROM {table_name} 
