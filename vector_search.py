@@ -94,7 +94,7 @@ def populate_table(data_dict: dict, table_name: str, batch_size: int) -> None:
 
     connection, cursor = connect_to_firebolt()
     
-    print("Populating the table...")
+    print("\nPopulating the table...")
 
     df = pd.DataFrame.from_dict(ordered_data_dict) # Make a DataFrame from the dictionary
     num_rows = len(df)                             # Number of rows to insert into the Firebolt table

@@ -50,8 +50,8 @@ class VectorSimilarityMetric(Enum):
     MANHATTAN_DISTANCE = 5
     SQUARED_EUCLIDEAN_DISTANCE = 6
 
-# Set this constant to your local path to GitHub 
-LOCAL_GITHUB_PATH = """ YOUR LOCAL GITHUB PATH HERE """
+# Set this constant to your local path to GitHub (with no spaces)
+LOCAL_GITHUB_PATH = """YOUR LOCAL GITHUB PATH HERE"""
 
 # Column names in the Firebolt table
 DOC_ID_COL = DOC_ID_KEY

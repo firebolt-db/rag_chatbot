@@ -95,18 +95,22 @@ if __name__ == '__main__':
                 - Whether the repo(s) have documents that are internal to your organization, or user-facing 
                   documents that anyone can access. (True for internal, False for user-facing).
             
-            The repo paths and main branches in the dictionary below are just placeholders. 
+            The repo paths and main branches in the dictionary below are just placeholders and examples of how to do this. 
             You must replace them with the corresponding information for your own repos.
         """
-        repo_dict = {REPO_PATHS_KEY: [os.path.join(LOCAL_GITHUB_PATH, "repo_name_1"), os.path.join(LOCAL_GITHUB_PATH, "repo_name_2")], 
+        repo_dict = {REPO_PATHS_KEY: [os.path.join(os.path.normpath(LOCAL_GITHUB_PATH), "repo_name_1"), 
+                                      os.path.join(os.path.normpath(LOCAL_GITHUB_PATH), "repo_name_2")], 
                      MAIN_BRANCH_KEY: ["main_branch_1", "main_branch_2"], 
                      INTERNAL_ONLY_KEY: [False, True]}
         
-        chunking_strategies = [ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING]
+        # Here, add or change chunking strategies by following the instructions in the README file
+        chunking_strategies = [ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING] 
         
         generate_embeddings_and_populate_table(repo_dict=repo_dict, batch_size=100,
                                                chunking_strategies=chunking_strategies, 
                                                rcts_chunk_size = 600, rcts_chunk_overlap=0)
 
-                                                                                                                                       
+
+
+                                                                                                                    
     
