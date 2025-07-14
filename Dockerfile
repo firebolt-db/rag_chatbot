@@ -22,6 +22,7 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 COPY . .
 
 RUN chown -R rag_user:rag_user /app
+RUN mkdir -p /home/rag_user/.ollama && chown -R rag_user:rag_user /home/rag_user/.ollama
 
 USER rag_user
 
@@ -29,5 +30,6 @@ EXPOSE 5000
 
 ENV PYTHONPATH=/app
 ENV OLLAMA_HOST=0.0.0.0:11434
+ENV HOME=/home/rag_user
 
 CMD ["sh", "-c", "ollama serve & sleep 10 && ollama pull llama3.1 && ollama pull nomic-embed-text && python web_server.py"]
