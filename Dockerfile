@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y \
 RUN adduser \
     --system \
     --home /home/rag_user \
-    --create-home \
     --group \
     rag_user
 
