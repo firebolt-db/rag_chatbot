@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  rag_chatbot:
+    build: .
+    ports:
+      - "5000:5000"
+      - "11434:11434"
+    volumes:
+      - ollama_data:/home/rag_user/.ollama
+      - ./chat_history:/app/chat_history
+    environment:
+      - FIREBOLT_ENGINE=${FIREBOLT_ENGINE}
+      - FIREBOLT_DB=${FIREBOLT_DB}
+      - FIREBOLT_CLIENT_ID=${FIREBOLT_CLIENT_ID}
+      - FIREBOLT_CLIENT_SECRET=${FIREBOLT_CLIENT_SECRET}
+      - FIREBOLT_ACCOUNT_NAME=${FIREBOLT_ACCOUNT_NAME}
+      - FIREBOLT_TABLE_NAME=${FIREBOLT_TABLE_NAME}
+    env_file:
+      - .env
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ollama_data:
+    driver: local
