@@ -7,6 +7,7 @@ services:
     volumes:
       - ollama_data:/home/rag_user/.ollama
       - ./chat_history:/app/chat_history
+      - ${LOCAL_GITHUB_PATH}:/github
     environment:
       - FIREBOLT_ENGINE=${FIREBOLT_ENGINE}
       - FIREBOLT_DB=${FIREBOLT_DB}
@@ -14,6 +15,7 @@ services:
       - FIREBOLT_CLIENT_SECRET=${FIREBOLT_CLIENT_SECRET}
       - FIREBOLT_ACCOUNT_NAME=${FIREBOLT_ACCOUNT_NAME}
       - FIREBOLT_TABLE_NAME=${FIREBOLT_TABLE_NAME}
+      - LOCAL_GITHUB_PATH=${LOCAL_GITHUB_PATH}
     env_file:
       - .env
     restart: unless-stopped

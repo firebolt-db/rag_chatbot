@@ -53,4 +53,4 @@ def existing_chatbot_session(session_id):
             return render_template("chatbot_response.html", chatbot_response=llm_response, session_id=session_id)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
