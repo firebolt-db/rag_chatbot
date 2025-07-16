@@ -1,6 +1,65 @@
 # rag_chatbot
 This repository contains code and instructions for running your own Firebolt-powered chatbot that uses retrieval-augmented generation (RAG).
 
+## Quick Start
+
+### Option 1: Docker Setup (Recommended)
+```bash
+# Clone the repository
+git clone <repository-url>
+cd rag_chatbot
+
+# Run the automated setup script
+./setup.sh --docker
+
+# Start the chatbot
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### Option 2: Local Setup
+```bash
+# Clone the repository
+git clone <repository-url>
+cd rag_chatbot
+
+# Run the automated setup script
+./setup.sh --local
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Start the chatbot
+python web_server.py
+```
+
+### Option 3: Task-based Setup
+If you have [Task](https://taskfile.dev/) installed:
+```bash
+# Install dependencies
+task install-deps
+
+# Setup Ollama models
+task setup-ollama
+
+# Start the server
+task start-server
+```
+
+## Configuration
+1. Copy `.env.example` to `.env` and fill in your Firebolt credentials
+2. Update `LOCAL_GITHUB_PATH` in `constants.py` with your local GitHub path
+3. Run `python populate_table.py` to populate your vector database
+
+## Troubleshooting
+- **GPU Support**: For Docker GPU support, ensure NVIDIA Docker runtime is installed
+- **Ollama Models**: Models are automatically downloaded but may take time on first run
+- **Port Conflicts**: Default ports are 5000 (web) and 11434 (Ollama)
+
+---
+
 # Prerequisites before setting up your chatbot
 1. [Register for Firebolt](https://docs.firebolt.io/Guides/getting-started/index.html)
 2. Create a database by following the instructions under the "Create a Database" section [here](https://docs.firebolt.io/Guides/getting-started/get-started-sql.html)

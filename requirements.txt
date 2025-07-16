@@ -1,0 +1,38 @@
+# Core ML/AI Dependencies
+torch==2.5.1
+transformers==4.47.1
+numpy==2.2.1
+
+# LangChain Ecosystem
+langchain==0.3.10
+langchain-core==0.3.28
+langchain-community==0.3.10
+langchain-experimental==0.3.4
+langchain-ollama==0.2.1
+
+# Natural Language Processing
+nltk==3.9.1
+
+# Document Processing
+python-docx==1.1.2
+mistletoe==1.4.0
+beautifulsoup4==4.12.3
+
+# Data Processing
+pandas==2.2.3
+
+# Git and Repository Analysis
+GitPython==3.1.43
+pydriller==2.7
+
+# Database and API
+firebolt-sdk==1.5.1
+
+# Web Framework
+flask==3.1.0
+
+# Environment and Configuration
+python-dotenv==1.0.1
+
+# Standard Library (included for completeness)
+uuid

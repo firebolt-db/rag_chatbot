@@ -1,0 +1,75 @@
+version: 3
+
+dotenv:
+  - .env
+
+tasks:
+
+  help:
+    desc: Display this help screen
+    silent: true
+    cmds:
+      - task --list
+
+  install-deps:
+    desc: Install Python dependencies
+    silent: true
+    cmds:
+      - pip install -r requirements.txt
+
+  setup-ollama:
+    desc: Download and setup Ollama models
+    silent: true
+    cmds:
+      - ollama pull llama3.1
+      - ollama pull nomic-embed-text
+
+  setup-local:
+    desc: Complete local setup (dependencies + Ollama models)
+    silent: true
+    cmds:
+      - task: install-deps
+      - task: setup-ollama
+
+  start-server:
+    desc: Start the RAG chatbot web server
+    silent: true
+    cmds:
+      - python web_server.py
+
+  populate-table:
+    desc: Populate Firebolt table with documents
+    silent: true
+    cmds:
+      - python populate_table.py
+
+  docker-build:
+    desc: Build Docker image
+    silent: true
+    cmds:
+      - docker build -t rag_chatbot .
+
+  docker-up:
+    desc: Start services with docker-compose
+    silent: true
+    cmds:
+      - docker-compose up -d
+
+  docker-down:
+    desc: Stop services with docker-compose
+    silent: true
+    cmds:
+      - docker-compose down
+
+  docker-logs:
+    desc: View docker-compose logs
+    silent: true
+    cmds:
+      - docker-compose logs -f
+
+  clean:
+    desc: Clean up Docker resources
+    silent: true
+    cmds:
+      - docker-compose down -v
+      - docker system prune -f

@@ -1,0 +1,8 @@
+# Ignore placeholder values in .env.example file
+.env.example  # Ignore all secrets in the example environment file
+
+# Ignore test and example configurations
+**/test*/**
+**/example*/**
+**/*example*
+**/*test*
