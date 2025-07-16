@@ -51,10 +51,7 @@ class VectorSimilarityMetric(Enum):
     MANHATTAN_DISTANCE = 5
     SQUARED_EUCLIDEAN_DISTANCE = 6
 
-# Set this constant to your local path to GitHub (with no spaces)
-LOCAL_GITHUB_PATH = os.environ.get('LOCAL_GITHUB_PATH', """YOUR LOCAL GITHUB PATH HERE""")
-if not os.path.exists(LOCAL_GITHUB_PATH) and os.path.exists('/github'):
-    LOCAL_GITHUB_PATH = '/github'
+from settings import LOCAL_GITHUB_PATH
 
 # Column names in the Firebolt table
 DOC_ID_COL = DOC_ID_KEY
@@ -75,4 +72,4 @@ MAX_TOKENS = 5000 # Max number of tokens to keep in the LLM's message history
 CHAT_HISTORY_FILENAME = "chat_history" 
 
 # Separates each message from the next one in the chat history files
-CHAT_HISTORY_SEPARATOR = "-"*15    
+CHAT_HISTORY_SEPARATOR = "-"*15                

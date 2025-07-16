@@ -5,9 +5,10 @@ This file populates the Firebolt table and performs vector search.
 from firebolt.db import connect
 from firebolt.db.connection import Connection
 from firebolt.db.cursor import CursorV2
-from dotenv import load_dotenv, dotenv_values
+from dotenv import load_dotenv
 from firebolt.client.auth import ClientCredentials
 from constants import *
+import settings
 from chunking_and_embedding import embed_question
 import pandas as pd
 import time
@@ -19,14 +20,12 @@ Returns: a Firebolt Connection object and a Firebolt Cursor object.
          Make sure to close the Connection and Cursor objects when you're done using them.
 """
 def connect_to_firebolt() -> tuple[Connection, CursorV2]:
-    env_variables = dotenv_values(dotenv_path=".env") # A dictionary containing the content of the .env file
-
     # Connect to Firebolt using a service account
     connection = connect(
-        engine_name=env_variables["FIREBOLT_ENGINE"],
-        database=env_variables["FIREBOLT_DB"],
-        auth=ClientCredentials(env_variables["FIREBOLT_CLIENT_ID"], env_variables["FIREBOLT_CLIENT_SECRET"]),
-        account_name=env_variables["FIREBOLT_ACCOUNT_NAME"]
+        engine_name=settings.FIREBOLT_RAG_CHATBOT_ENGINE,
+        database=settings.FIREBOLT_RAG_CHATBOT_DB,
+        auth=ClientCredentials(settings.FIREBOLT_RAG_CHATBOT_CLIENT_ID, settings.FIREBOLT_RAG_CHATBOT_CLIENT_SECRET),
+        account_name=settings.FIREBOLT_RAG_CHATBOT_ACCOUNT_NAME
     )
 
     return connection, connection.cursor()
@@ -172,9 +171,8 @@ def vector_search(question: str, k: int, chunking_strategy: str,
     
     question_vector = embed_question(question) # Make an embedding of the question
 
-    # Get Firebolt table name from .env file
-    env_variables = dotenv_values(dotenv_path=".env") # A dictionary containing the content of the .env file
-    table_name = env_variables["FIREBOLT_TABLE_NAME"]    
+    # Get Firebolt table name from settings
+    table_name = settings.FIREBOLT_RAG_CHATBOT_TABLE_NAME    
         
     connection, cursor = connect_to_firebolt()
     

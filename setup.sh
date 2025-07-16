@@ -128,7 +128,7 @@ setup_env_file() {
         print_status "Creating .env file from template..."
         cp .env.example .env
         print_warning "Please edit .env file with your Firebolt credentials before running the chatbot"
-        print_status "Required variables: FIREBOLT_ENGINE, FIREBOLT_DB, FIREBOLT_CLIENT_ID, FIREBOLT_CLIENT_SECRET, FIREBOLT_ACCOUNT_NAME, FIREBOLT_TABLE_NAME"
+        print_status "Required variables: FIREBOLT_RAG_CHATBOT_ENGINE, FIREBOLT_RAG_CHATBOT_DB, FIREBOLT_RAG_CHATBOT_CLIENT_ID, FIREBOLT_RAG_CHATBOT_CLIENT_SECRET, FIREBOLT_RAG_CHATBOT_ACCOUNT_NAME, FIREBOLT_RAG_CHATBOT_TABLE_NAME"
     else
         print_success ".env file already exists"
     fi
@@ -240,7 +240,7 @@ main() {
     print_success "Setup completed successfully!"
     print_status "Next steps:"
     print_status "1. Edit .env file with your Firebolt credentials"
-    print_status "2. Update constants.py with your LOCAL_GITHUB_PATH"
+    print_status "2. Update constants.py with your FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH"
     print_status "3. Run 'python populate_table.py' to populate the database"
     print_status "4. Start the chatbot with the appropriate command shown above"
 }

@@ -50,7 +50,7 @@ task start-server
 
 ## Configuration
 1. Copy `.env.example` to `.env` and fill in your Firebolt credentials
-2. Update `LOCAL_GITHUB_PATH` in `constants.py` with your local GitHub path
+2. Update `FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH` in `constants.py` with your local GitHub path
 3. Run `python populate_table.py` to populate your vector database
 
 ### Docker Setup for populate_table.py
@@ -72,10 +72,10 @@ docker compose exec rag_chatbot python populate_table.py
 ```
 
 **Important Notes for Docker:**
-- The `LOCAL_GITHUB_PATH` environment variable should point to your local GitHub repositories directory
+- The `FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH` environment variable should point to your local GitHub repositories directory
 - This directory is automatically mounted to `/github` inside the Docker container
 - The script will automatically use `/github` as the base path when running in Docker
-- Make sure your document repositories are cloned locally in the `LOCAL_GITHUB_PATH` directory before running
+- Make sure your document repositories are cloned locally in the `FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH` directory before running
 
 ## Troubleshooting
 - **GPU Support**: For Docker GPU support, ensure NVIDIA Docker runtime is installed
@@ -107,16 +107,16 @@ docker compose exec rag_chatbot python populate_table.py
 `pip install torch pydriller GitPython mistletoe bs4 langchain-community numpy langchain langchain-experimental nltk langchain-ollama uuid python-docx pandas langchain-core firebolt-sdk python-dotenv transformers flask`
 7. Add your Firebolt service account credentials and other Firebolt connection information
     - Go to the `.env` file and set the environment variables to their correct values:
-        - Set the `FIREBOLT_CLIENT_ID` variable to the ID of your service account
-        - Set the `FIREBOLT_CLIENT_SECRET` to the secret of your service account
-        - Set `FIREBOLT_ENGINE` to the name of your Firebolt engine
-        - Set `FIREBOLT_DB` to the name of your Firebolt database
-        - Set `FIREBOLT_ACCOUNT_NAME` to the name of the account that you obtained or created in step 4 of the "Prerequisities before setting up the chatbot" section
-        - Set `FIREBOLT_TABLE_NAME` to the name that you would like your Firebolt table for the vector database to have. (That table does not have to already exist).
+        - Set the `FIREBOLT_RAG_CHATBOT_CLIENT_ID` variable to the ID of your service account
+        - Set the `FIREBOLT_RAG_CHATBOT_CLIENT_SECRET` to the secret of your service account
+        - Set `FIREBOLT_RAG_CHATBOT_ENGINE` to the name of your Firebolt engine
+        - Set `FIREBOLT_RAG_CHATBOT_DB` to the name of your Firebolt database
+        - Set `FIREBOLT_RAG_CHATBOT_ACCOUNT_NAME` to the name of the account that you obtained or created in step 4 of the "Prerequisities before setting up the chatbot" section
+        - Set `FIREBOLT_RAG_CHATBOT_TABLE_NAME` to the name that you would like your Firebolt table for the vector database to have. (That table does not have to already exist).
     - If any of the values or credentials in the `.env` file change, you will have to go to the `.env` file and change the appropriate environment variables.
 8. Populate the Firebolt table with the documents you will use for RAG:
     - Put the documents in one or more GitHub repositories. Clone ALL of those repositories to your local machine.
-    - Go to `constants.py` and set the `LOCAL_GITHUB_PATH` variable to the path to GitHub on your local machine. There must be no spaces in the string value of `LOCAL_GITHUB_PATH`
+    - Go to `constants.py` and set the `FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH` variable to the path to GitHub on your local machine. There must be no spaces in the string value of `FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH`
     - Optionally, you may specify files that you want the code for reading documents from the GitHub repos to ignore. To do so, go to `constants.py` and add the names of those files to the `DISALLOWED_FILENAMES` variable. For example, you might not want the README or the license to be in the Firebolt table. 
     - Go to `populate_table.py` and do the following:
         - In the main method, set the `chunking_strategies` variable to a list of one or more chunking strategies that you want to use to chunk the documents.

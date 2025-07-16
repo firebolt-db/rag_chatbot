@@ -8,7 +8,7 @@ from chunking_and_embedding import chunk_documents, embed_chunks, hash_list_of_s
 from constants import *
 import os
 import time
-from dotenv import dotenv_values
+import settings
 
 
 """
@@ -42,9 +42,8 @@ def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies:
         main_branches = repo_dict[MAIN_BRANCH_KEY]
         internal_only_statuses = repo_dict[INTERNAL_ONLY_KEY]
 
-        # Get Firebolt table name from .env file
-        env_variables = dotenv_values(dotenv_path=".env") # A dictionary containing the content of the .env file
-        table_name = env_variables["FIREBOLT_TABLE_NAME"]    
+        # Get Firebolt table name from settings
+        table_name = settings.FIREBOLT_RAG_CHATBOT_TABLE_NAME    
         
         for i in range(len(repo_paths)):
             repo_path = repo_paths[i]
