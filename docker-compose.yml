@@ -8,6 +8,7 @@ services:
       - ollama_data:/home/rag_user/.ollama
       - ./chat_history:/app/chat_history
       - ${LOCAL_GITHUB_PATH}:/github
+      - .:/app
     environment:
       - FIREBOLT_ENGINE=${FIREBOLT_ENGINE}
       - FIREBOLT_DB=${FIREBOLT_DB}

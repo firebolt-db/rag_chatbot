@@ -53,6 +53,30 @@ task start-server
 2. Update `LOCAL_GITHUB_PATH` in `constants.py` with your local GitHub path
 3. Run `python populate_table.py` to populate your vector database
 
+### Docker Setup for populate_table.py
+When using Docker, you can populate the table using the following methods:
+
+**Option 1: Using Task (Recommended)**
+```bash
+# This automatically detects Docker vs local setup
+task populate
+```
+
+**Option 2: Direct Docker Command**
+```bash
+# Ensure your Docker services are running
+docker compose up -d
+
+# Run populate_table.py inside the container
+docker compose exec rag_chatbot python populate_table.py
+```
+
+**Important Notes for Docker:**
+- The `LOCAL_GITHUB_PATH` environment variable should point to your local GitHub repositories directory
+- This directory is automatically mounted to `/github` inside the Docker container
+- The script will automatically use `/github` as the base path when running in Docker
+- Make sure your document repositories are cloned locally in the `LOCAL_GITHUB_PATH` directory before running
+
 ## Troubleshooting
 - **GPU Support**: For Docker GPU support, ensure NVIDIA Docker runtime is installed
 - **Ollama Models**: Models are automatically downloaded but may take time on first run
@@ -99,7 +123,7 @@ task start-server
         - If needed, you may change the `batch_size`, `rcts_chunk_size`, `rcts_chunk_overlap`, `num_words_per_chunk`, and/or `num_sentences_per_chunk` arguments in the call to `generate_embeddings_and_populate_table()` 
         - Update the `repo_dict` variable in `populate_table.py` with your GitHub repos (see `populate_table.py` for information about how to do that)
             - The instructions in `populate_table.py` mention internal documents and user-facing documents. This may not be applicable to your use case. But, for the Firebolt chatbot, it was necessary to indicate whether each document was internal or user-facing. This is because our chatbot will be used by both employees and customers. So, if the user is a customer, we need to filter out the internal documents, and if the user is a Firebolt employee, we can keep them. If you also have some internal documents and some user-facing ones, and if both employees of your organization and public users will use your chatbot, you will have to appropriately specify which repos have internal or user-facing documents (respectively) in `populate_table.py`.
-    - Now run `populate_table.py`. This will create and populate the Firebolt table. Make sure the table is done being populated before you do step 10 of these instructions.
+    - Now run `populate_table.py`. For local setup, run `python populate_table.py`. For Docker setup, see the "Docker Setup for populate_table.py" section above or use `task populate`. This will create and populate the Firebolt table. Make sure the table is done being populated before you do step 10 of these instructions.
 9. Change the prompt given to the chatbot to suit your use case. To do so, change the `prompt` variable in the `run_chatbot()` function in `run_llm.py`. For example, if you are building a healthcare chatbot that answers medical questions, you might start the prompt with "You are a healthcare chatbot that assists medical professionals in answering questions...". Be sure to follow the instructions in the comments above that variable. 
 10. To run a local web server where you can use the chatbot:
     - Do the following to pass the correct chunking strategy to the `run_chatbot()` function:

@@ -98,10 +98,9 @@ if __name__ == '__main__':
             The repo paths and main branches in the dictionary below are just placeholders and examples of how to do this. 
             You must replace them with the corresponding information for your own repos.
         """
-        repo_dict = {REPO_PATHS_KEY: [os.path.join(os.path.normpath(LOCAL_GITHUB_PATH), "repo_name_1"), 
-                                      os.path.join(os.path.normpath(LOCAL_GITHUB_PATH), "repo_name_2")], 
-                     MAIN_BRANCH_KEY: ["main_branch_1", "main_branch_2"], 
-                     INTERNAL_ONLY_KEY: [False, True]}
+        repo_dict = {REPO_PATHS_KEY: [os.path.join(os.path.normpath(LOCAL_GITHUB_PATH), "rag_dataset")],
+                     MAIN_BRANCH_KEY: ["main"],
+                     INTERNAL_ONLY_KEY: [False]}
         
         # Here, add or change chunking strategies by following the instructions in the README file
         chunking_strategies = [ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING] 

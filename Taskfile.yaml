@@ -43,6 +43,19 @@ tasks:
     cmds:
       - python populate_table.py
 
+  populate:
+    desc: Populate Firebolt table with documents (Docker-aware)
+    silent: true
+    cmds:
+      - |
+        if command -v docker >/dev/null 2>&1 && docker compose ps 2>/dev/null | grep -q "rag_chatbot.*Up"; then
+          echo "Docker detected - running populate_table.py inside container..."
+          docker compose exec rag_chatbot python populate_table.py
+        else
+          echo "Docker not running - using local Python environment..."
+          python populate_table.py
+        fi
+
   docker-build:
     desc: Build Docker image
     silent: true
