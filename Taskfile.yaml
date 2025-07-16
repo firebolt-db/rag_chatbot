@@ -50,10 +50,10 @@ tasks:
       - |
         if command -v docker >/dev/null 2>&1 && docker compose ps 2>/dev/null | grep -q "rag_chatbot.*Up"; then
           echo "Docker detected - running populate_table.py inside container..."
-          docker compose exec rag_chatbot python populate_table.py
+          docker compose exec -T rag_chatbot python -u populate_table.py
         else
           echo "Docker not running - using local Python environment..."
-          python populate_table.py
+          python -u populate_table.py
         fi
 
   docker-build:

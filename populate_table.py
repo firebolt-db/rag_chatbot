@@ -7,6 +7,7 @@ from vector_search import populate_table
 from chunking_and_embedding import chunk_documents, embed_chunks, hash_list_of_strings
 from constants import *
 import os
+import time
 from dotenv import dotenv_values
 
 
@@ -49,12 +50,21 @@ def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies:
             repo_path = repo_paths[i]
             repo_name = os.path.basename(os.path.normpath(repo_path)) # Get the repo name from the repo path
 
+            print(f"\n{'='*60}")
+            print(f"Processing repository {i+1}/{len(repo_paths)}: {repo_name}")
+            print(f"{'='*60}")
+
             # For each of these chunking strategies, chunk and embed the docs and populate the table
-            for chunking_strategy in chunking_strategies:
+            for strategy_num, chunking_strategy in enumerate(chunking_strategies, 1):
+                print(f"\nStrategy {strategy_num}/{len(chunking_strategies)}: {chunking_strategy.name}")
+                
+                phase_start = time.time()
                 main_branch = main_branches[i]
                 internal_only_status = internal_only_statuses[i]
 
                 # Get all the filepaths in the current repo
+                print(f"\nPhase 1: Discovering documents in {repo_name}...")
+                discovery_start = time.time()
                 filepaths_dict = get_filepaths_in_local_repo(local_repo_path=repo_path,
                                                              file_names_to_ignore=DISALLOWED_FILENAMES, 
                                                              internal_only=internal_only_status) 
@@ -69,7 +79,12 @@ def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies:
 
                 filepaths = document_dict[FILEPATHS_KEY]
                 document_dict[DOC_ID_KEY] = hash_list_of_strings(filepaths) # Hash the filepaths to get the document IDs
+                
+                discovery_time = time.time() - discovery_start
+                print(f"Phase 1 completed in {discovery_time:.1f}s - found {len(filepaths)} documents")
 
+                print(f"\nPhase 2: Chunking documents...")
+                chunking_start = time.time()
                 chunk_dictionary = chunk_documents(document_dict, 
                                                     chunking_strategy=chunking_strategy, 
                                                     rcts_chunk_size=rcts_chunk_size,
@@ -79,9 +94,24 @@ def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies:
 
                 # Add the repo name to the dictionary
                 chunk_dictionary[REPO_NAME_KEY] = [repo_name for i in range(len(chunk_dictionary[CHUNK_CONTENT_KEY]))] 
+                
+                chunking_time = time.time() - chunking_start
+                print(f"Phase 2 completed in {chunking_time:.1f}s")
 
+                print(f"\nPhase 3: Generating embeddings...")
+                embedding_start = time.time()
                 embeddings_dict = embed_chunks(chunk_dictionary) # Get the embeddings
-                populate_table(embeddings_dict, table_name, batch_size) 
+                embedding_time = time.time() - embedding_start
+                print(f"Phase 3 completed in {embedding_time:.1f}s")
+                
+                print(f"\nPhase 4: Populating database...")
+                db_start = time.time()
+                populate_table(embeddings_dict, table_name, batch_size)
+                db_time = time.time() - db_start
+                print(f"Phase 4 completed in {db_time:.1f}s")
+                
+                total_time = time.time() - phase_start
+                print(f"\nStrategy {strategy_num} completed in {total_time:.1f}s total")
 
 
 if __name__ == '__main__':

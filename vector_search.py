@@ -10,6 +10,7 @@ from firebolt.client.auth import ClientCredentials
 from constants import *
 from chunking_and_embedding import embed_question
 import pandas as pd
+import time
 
 """
 Connect to Firebolt using the credentials from the .env file
@@ -94,19 +95,24 @@ def populate_table(data_dict: dict, table_name: str, batch_size: int) -> None:
 
     connection, cursor = connect_to_firebolt()
     
-    print("\nPopulating the table...")
-
     df = pd.DataFrame.from_dict(ordered_data_dict) # Make a DataFrame from the dictionary
     num_rows = len(df)                             # Number of rows to insert into the Firebolt table
-
-    print(f"Number of rows being inserted: {num_rows}")
 
     # If the batch size is more than the number of rows in the table, or if it's less than 1, set it to a default value of 100
     if batch_size > num_rows or batch_size < 1:
         batch_size = 100
 
+    print(f"\nPopulating the table with {num_rows} rows in batches of {batch_size}...")
+    
+    start_time = time.time()
+    total_batches = (num_rows + batch_size - 1) // batch_size
+
     # Insert data into the table in batches of `batch_size` rows at a time        
-    for i in range(0, num_rows, batch_size):
+    for batch_num, i in enumerate(range(0, num_rows, batch_size), 1):
+        if batch_num % 5 == 0 or batch_num == total_batches:
+            elapsed = time.time() - start_time
+            rate = (batch_num * batch_size) / elapsed if elapsed > 0 else 0
+            print(f"  Inserting batch {batch_num}/{total_batches} ({rate:.1f} rows/sec)")
         row_values = [] # The next batch of rows to insert
 
         # If there are at least `batch_size` rows left, insert the next `batch_size` rows
@@ -139,7 +145,9 @@ def populate_table(data_dict: dict, table_name: str, batch_size: int) -> None:
     cursor.close()
     connection.close()
 
-    print("Done populating the table.")
+    elapsed = time.time() - start_time
+    avg_rate = num_rows / elapsed if elapsed > 0 else 0
+    print(f"Done populating the table - {num_rows} rows in {elapsed:.1f}s ({avg_rate:.1f} rows/sec)")
 
 """
 Performs vector search and returns the top k most similar rows to the user's question.

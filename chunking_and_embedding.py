@@ -10,6 +10,7 @@ from langchain_experimental.text_splitter import SemanticChunker
 import copy 
 import re
 import nltk
+import time
 from datetime import date
 from constants import *
 
@@ -85,19 +86,22 @@ def chunk_documents(document_dictionary: dict, chunking_strategy: ChunkingStrate
                     rcts_chunk_size: int = 600, rcts_chunk_overlap: int = 125, 
                     num_words_per_chunk: int = 100, num_sentences_per_chunk: int = 3) -> dict:
 
-    print("\nChunking the documents...")
-
-      
-    # Dictionary that stores the necessary info for each chunk
-    chunk_dictionary = {DOC_ID_KEY:[], DOC_VERSION_KEY:[], DOC_NAME_KEY:[], CHUNK_CONTENT_KEY:[], INTERNAL_ONLY_KEY:[]} 
     document_ids = document_dictionary[DOC_ID_KEY]
     document_texts = document_dictionary[DOC_TEXTS_KEY]
     document_versions = document_dictionary[DOC_VERSION_KEY]
     document_names = document_dictionary[DOC_NAME_KEY]
     internal_only_statuses = document_dictionary[INTERNAL_ONLY_KEY]
+    
+    print(f"\nChunking {len(document_ids)} documents using {chunking_strategy.name}...")
+
+      
+    # Dictionary that stores the necessary info for each chunk
+    chunk_dictionary = {DOC_ID_KEY:[], DOC_VERSION_KEY:[], DOC_NAME_KEY:[], CHUNK_CONTENT_KEY:[], INTERNAL_ONLY_KEY:[]} 
     chunking_strategy_string = "" # the string to store in the FB table for the chunking strategy
 
     for i in range(len(document_ids)):
+        if i % 10 == 0 or i == len(document_ids) - 1:
+            print(f"  Chunking document {i+1}/{len(document_ids)}: {document_names[i]}")
         document_id = document_ids[i]
         document_text = document_texts[i]
         document_version = document_versions[i]
@@ -146,7 +150,8 @@ def chunk_documents(document_dictionary: dict, chunking_strategy: ChunkingStrate
     chunk_dictionary[CHUNK_ID_KEY] = hash_list_of_strings(chunk_dictionary[CHUNK_CONTENT_KEY]) # Hash the chunks to get the chunk IDs
     chunk_dictionary[CHUNKING_STRATEGY_KEY] = [chunking_strategy_string for i in range(len(chunk_dictionary[CHUNK_CONTENT_KEY]))]
 
-    print("Done chunking the documents")
+    total_chunks = len(chunk_dictionary[CHUNK_CONTENT_KEY])
+    print(f"Done chunking the documents - generated {total_chunks} chunks")
 
     return chunk_dictionary
 
@@ -200,10 +205,15 @@ Returns: The input dictionary, but with the following keys and values added:
 """
 
 def embed_chunks(chunk_dictionary: dict) -> dict:
-    print("\nEmbedding the chunks...")
+    chunks = chunk_dictionary[CHUNK_CONTENT_KEY]
+    total_chunks = len(chunks)
+    print(f"\nEmbedding {total_chunks} chunks using {EMBEDDING_MODEL_NAME}...")
+    print("Note: Ollama may output 'decode: cannot decode batches' warnings during embedding generation")
+    print("These are normal verbose logs from the embedding model and do not indicate errors")
+    
+    start_time = time.time()
 
     ollama_emb = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
-    chunks = chunk_dictionary[CHUNK_CONTENT_KEY]
     dictionary = copy.deepcopy(chunk_dictionary) # use deepcopy() to make sure changes to this dictionary don't change the original one
     dictionary[EMBEDDING_KEY] = []
 
@@ -212,6 +222,10 @@ def embed_chunks(chunk_dictionary: dict) -> dict:
     dictionary[DATE_GENERATED_KEY] = []
 
     for i in range(len(chunks)):
+        if i % 50 == 0 or i == len(chunks) - 1:
+            elapsed = time.time() - start_time
+            rate = (i + 1) / elapsed if elapsed > 0 else 0
+            print(f"  Embedding chunk {i+1}/{total_chunks} ({rate:.1f} chunks/sec)")
         current_chunk = chunks[i]
         embedding = ollama_emb.embed_documents([current_chunk])
 
@@ -225,7 +239,9 @@ def embed_chunks(chunk_dictionary: dict) -> dict:
         dictionary[EMBEDDING_MODEL_KEY].append(EMBEDDING_MODEL_NAME)
         dictionary[DATE_GENERATED_KEY].append(date.today())
 
-    print("Done embedding the chunks.")
+    elapsed = time.time() - start_time
+    avg_rate = total_chunks / elapsed if elapsed > 0 else 0
+    print(f"Done embedding the chunks - {total_chunks} chunks in {elapsed:.1f}s ({avg_rate:.1f} chunks/sec)")
     return dictionary
 
 """

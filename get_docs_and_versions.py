@@ -78,8 +78,12 @@ def get_document_texts_and_names(filepaths_dict: dict, indicate_md_tables: bool 
     document_texts = []
     document_names = []
     filepaths = filepaths_dict[FILEPATHS_KEY]
+    
+    print(f"\nExtracting text from {len(filepaths)} documents...")
 
-    for filepath in filepaths:
+    for i, filepath in enumerate(filepaths):
+        if i % 20 == 0 or i == len(filepaths) - 1:
+            print(f"  Processing document {i+1}/{len(filepaths)}: {os.path.basename(filepath)}")
         # Append the file to the list of returned files only if it's a file format that we can read
         document_text = get_text_from_document(filepath, indicate_md_tables, md_table_separator)
         document_texts.append(document_text)
@@ -126,10 +130,15 @@ def get_document_versions(path_to_repo: str, document_dict: dict, branch_name: s
     versions_dict[DOC_VERSION_KEY] = [None for i in range(len(filepaths))]
     versions = versions_dict[DOC_VERSION_KEY] 
 
-    print("\nGetting the document versions...")
+    print(f"\nGetting the document versions for {len(filepaths)} files...")
+    commits_processed = 0
 
     # Use 'reverse' to get the commits from the newest to the oldest. Use only_in_branch to get only the commits from the specified branch
     for commit in Repository(path_to_repo=path_to_repo, order='reverse', only_in_branch=branch_name).traverse_commits():
+        commits_processed += 1
+        if commits_processed % 100 == 0:
+            remaining_files = sum(1 for v in versions if v is None)
+            print(f"  Processed {commits_processed} commits, {remaining_files} files still need versions")
         modified_file_paths = [] # paths of files that were modified by this commit
 
         # Need to handle merge commits separately because commit.modified_files may be an empty list for merge commits
@@ -173,10 +182,10 @@ def get_document_versions(path_to_repo: str, document_dict: dict, branch_name: s
 
         # If all the docs already have a version, we don't have to go through the rest of the commits
         if not (None in versions_dict[DOC_VERSION_KEY]):
-            print("Done getting the document versions")
+            print(f"Done getting the document versions (processed {commits_processed} commits)")
             return versions_dict
         
-    print("Done getting the document versions")
+    print(f"Done getting the document versions (processed {commits_processed} commits)")
     return versions_dict
 
 """
