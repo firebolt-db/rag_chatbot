@@ -23,6 +23,7 @@ COPY . .
 
 RUN chown -R rag_user:rag_user /app
 RUN mkdir -p /home/rag_user/.ollama && chown -R rag_user:rag_user /home/rag_user/.ollama
+RUN mkdir -p /app/chat_history && chown -R rag_user:rag_user /app/chat_history
 
 USER rag_user
 

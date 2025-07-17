@@ -1,6 +1,6 @@
 # Core ML/AI Dependencies
 torch==2.5.1
-transformers==4.47.1
+transformers==4.53.2
 numpy==2.2.1
 
 # LangChain Ecosystem
@@ -12,6 +12,7 @@ langchain-ollama==0.2.1
 
 # Natural Language Processing
 nltk==3.9.1
+tokenizers>=0.15.0
 
 # Document Processing
 python-docx==1.1.2

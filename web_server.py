@@ -47,8 +47,8 @@ def existing_chatbot_session(session_id):
             
             """ Here, change the chunking_strategy argument by following the instructions in the README file. """
             llm_response = run_chatbot(user_question=customer_message, session_id=session_id, chat_history_dir = "chat_history", k=10,
-                                        print_vector_search=True, chunking_strategy="YOUR CHUNKING STRATEGY HERE",
-                                        similarity_metric=VectorSimilarityMetric.COSINE_SIMILARITY, is_customer=False) 
+                                        print_vector_search=True, chunking_strategy="Semantic chunking",
+                                        similarity_metric=VectorSimilarityMetric.COSINE_SIMILARITY, is_customer=False)
             
             return render_template("chatbot_response.html", chatbot_response=llm_response, session_id=session_id)
 

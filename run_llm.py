@@ -8,11 +8,15 @@ from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMess
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_ollama.chat_models import ChatOllama
 from langchain_core.messages import trim_messages, HumanMessage, AIMessage
+from langchain_core.caches import BaseCache
+from langchain_core.callbacks import Callbacks
 from constants import *
 from operator import itemgetter
 from langchain_core.runnables import RunnablePassthrough
 from vector_search import vector_search
 import os
+
+ChatOllama.model_rebuild()
 
         
 """
