@@ -4,8 +4,9 @@ This file starts a local web server for accessing the chatbot through a web UI.
 
 from flask import Flask, render_template, request
 from run_llm import run_chatbot
+import settings
 import uuid
-from constants import *
+from constants import VectorSimilarityMetric
 
 app = Flask(__name__)
 
@@ -46,7 +47,7 @@ def existing_chatbot_session(session_id):
                 return render_template("error_page.html")
             """ Here, change the chunking_strategy argument by following the instructions in the README file. """
             llm_response = run_chatbot(user_question=customer_message, session_id=session_id, chat_history_dir = "chat_history", k=10,
-                                        print_vector_search=True, chunking_strategy="Semantic chunking",
+                                        print_vector_search=True, chunking_strategy=settings.FIREBOLT_RAG_CHATBOT_CHUNKING_STRATEGY,
                                         similarity_metric=VectorSimilarityMetric.COSINE_SIMILARITY, is_customer=False)
             
             return render_template("chatbot_response.html", chatbot_response=llm_response, session_id=session_id)

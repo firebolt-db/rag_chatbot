@@ -155,7 +155,7 @@ Parameters:
     - k: how many chunks to return
     - chunking_strategy:
             The chunking strategy of the chunks you want to retrieve.
-            (e.g.: passing "Semantic chunking") only retrieves chunks that were chunked with semantic chunking.
+            (e.g.: passing "Recursive character text splitting with chunk size = 300 and chunk overlap = 50") only retrieves chunks that were chunked with that strategy.
             This parameter MUST be a string that exists in the `chunking_strategy` column of your Firebolt table. 
             To see what chunking strategies are in the table, run the following query in your Firebolt database: 
             `select distinct(chunking_strategy) from table_name;` (where table_name is the actual name of your table).

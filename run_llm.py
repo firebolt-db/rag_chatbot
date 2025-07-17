@@ -14,6 +14,7 @@ from constants import *
 from operator import itemgetter
 from langchain_core.runnables import RunnablePassthrough
 from vector_search import vector_search
+import settings
 import os
 import time
 
@@ -49,11 +50,14 @@ Parameters:
 
 Returns: the bot's response to the question
 """
-def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "chat_history", chunking_strategy: str = "Semantic chunking", 
+def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "chat_history", chunking_strategy: str = None, 
                 k: int = 10, similarity_metric: VectorSimilarityMetric = VectorSimilarityMetric.COSINE_SIMILARITY, 
                 print_vector_search: bool = False, is_customer: bool = True) -> str:
         
         request_start_time = time.time()
+        
+        if chunking_strategy is None:
+            chunking_strategy = settings.FIREBOLT_RAG_CHATBOT_CHUNKING_STRATEGY
         print(f"\n{'='*60}")
         print(f"Processing chatbot request for session: {session_id}")
         print(f"Question: {user_question}")
