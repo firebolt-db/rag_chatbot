@@ -66,10 +66,10 @@ INTERNAL_ONLY_COL = INTERNAL_ONLY_KEY
 REPO_NAME_COL = REPO_NAME_KEY
 DOC_NAME_COL = DOC_NAME_KEY
 
-MAX_TOKENS = 5000 # Max number of tokens to keep in the LLM's message history
+MAX_TOKENS = 3000 # Max number of tokens to keep in the LLM's message history
 
 # Name of the file that stores the chat history (without the file extension). There will be a session ID added to each filename.
 CHAT_HISTORY_FILENAME = "chat_history" 
 
 # Separates each message from the next one in the chat history files
-CHAT_HISTORY_SEPARATOR = "-"*15                
+CHAT_HISTORY_SEPARATOR = "-"*15                                

@@ -1,7 +1,7 @@
 # Core ML/AI Dependencies
 torch>=2.2.0,<2.6.0
 transformers==4.53.2
-numpy==2.2.1
+numpy>=1.21.0,<2.0
 
 # LangChain Ecosystem
 langchain==0.3.10
