@@ -3,86 +3,338 @@ version: 3
 dotenv:
   - .env
 
-tasks:
+vars:
+  PYTHON_CMD: '{{.PYTHON_CMD | default "python3"}}'
 
+tasks:
   help:
     desc: Display this help screen
     silent: true
     cmds:
       - task --list
+      - echo 'To specify Python version:task PYTHON_CMD=python3.12 setup:local'
 
-  install-deps:
+  detect:python:
+    desc: Detect and validate Python 3.12
+    cmds:
+      - |
+        if command -v python3.12 > /dev/null 2>&1; then
+          echo "python3.12"
+        elif command -v python3 > /dev/null 2>&1 && python3 --version 2>&1 | grep -q "Python 3.12"; then
+          echo "python3"
+        elif command -v pyenv > /dev/null 2>&1; then
+          PYENV_CMD=$(pyenv which python 2>/dev/null || echo "")
+          if [[ -n "$PYENV_CMD" ]] && $PYENV_CMD --version 2>&1 | grep -q "Python 3.12"; then
+            echo "$PYENV_CMD" 
+          fi
+        else
+          echo "{{.PYTHON_CMD}}"
+        fi
+
+  check:dependencies:
+    desc: Check for required dependencies
+    silent: true
+    cmds:
+      - |
+        echo "Checking dependencies..."
+        
+        # Check Python
+        PYTHON=$(task detect:python)
+        PY_VERSION=$($PYTHON --version 2>&1)
+        echo "✓ $PY_VERSION found"
+        
+        # Check Docker if needed
+        if [[ "{{.DOCKER}}" == "true" ]]; then
+          if ! command -v docker > /dev/null 2>&1; then
+            echo "✗ Docker not found"
+            exit 1
+          fi
+          
+          if ! command -v docker-compose > /dev/null 2>&1 && ! docker compose version > /dev/null 2>&1; then
+            echo "✗ Docker Compose not found"
+            exit 1
+          fi
+          
+          echo "✓ Docker available"
+        fi
+        
+        # Check Ollama for local setup
+        if [[ "{{.DOCKER}}" != "true" ]] && ! command -v ollama > /dev/null 2>&1; then
+          echo "✗ Ollama not found"
+          echo "  Will install via setup:ollama task"
+        else
+          echo "✓ Ollama available"
+        fi
+    vars:
+      DOCKER: "{{.DOCKER | default \"false\"}}"
+
+  setup:env:
+    desc: Create .env file from template if not exists
+    silent: true
+    cmds:
+      - |
+        if [[ ! -f ".env" ]]; then
+          echo "Creating .env file from template..."
+          cp .env.example .env
+          echo "⚠ Please edit .env file with your Firebolt credentials"
+        else
+          echo "✓ .env file already exists"
+        fi
+
+  setup:venv:
+    desc: Create and activate Python virtual environment
+    silent: true
+    cmds:
+      - |
+        PYTHON=$(task detect:python)
+        if [[ ! -d ".venv" ]]; then
+          echo "Creating virtual environment..."
+          $PYTHON -m venv .venv
+        else
+          echo "✓ Virtual environment already exists"
+        fi
+        echo "To activate: source .venv/bin/activate"
+
+  setup:ollama:
+    desc: Install Ollama if not present and download required models
+    silent: true
+    cmds:
+      - |
+        if ! command -v ollama > /dev/null 2>&1; then
+          echo "Installing Ollama..."
+          OS=$(uname -s)
+          case "$OS" in
+            Darwin)
+              if command -v brew > /dev/null 2>&1; then
+                brew install ollama
+                brew services start ollama
+              else
+                echo "⚠ Homebrew not found. Please install manually:"
+                echo "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                echo "  brew install ollama && brew services start ollama"
+                exit 1
+              fi
+              ;;
+            Linux)
+              curl -fsSL https://ollama.com/install.sh | sh
+              ;;
+            *)
+              echo "⚠ Unsupported OS: $OS"
+              echo "  Please install Ollama manually from https://ollama.com/download"
+              exit 1
+              ;;
+          esac
+        else
+          echo "✓ Ollama is already installed"
+        fi
+        
+        # Ensure Ollama server is running
+        echo "Checking Ollama server status..."
+        OS=$(uname -s)
+        if [ "$OS" = "Darwin" ]; then
+          # For macOS, try to start via brew services if not running
+          if ! pgrep -x "ollama" > /dev/null; then
+            echo "Starting Ollama server via brew services..."
+            brew services start ollama
+            # Wait for server to start
+            echo "Waiting for Ollama server to start (30s timeout)..."
+            max_attempts=30
+            attempt=0
+            while ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; do
+              attempt=$((attempt+1))
+              if [ $attempt -ge $max_attempts ]; then
+                echo "Error: Failed to start Ollama server after 30 seconds"
+                echo "Try starting it manually with 'ollama serve' in another terminal"
+                exit 1
+              fi
+              sleep 1
+              echo -n "."
+            done
+            echo ""
+          fi
+        else
+          # For other systems, just check if server is reachable
+          if ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; then
+            echo "Starting Ollama server..."
+            # Try to start in background
+            ollama serve > /dev/null 2>&1 &
+            # Wait for server to start
+            echo "Waiting for Ollama server to start (30s timeout)..."
+            max_attempts=30
+            attempt=0
+            while ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; do
+              attempt=$((attempt+1))
+              if [ $attempt -ge $max_attempts ]; then
+                echo "Error: Failed to start Ollama server after 30 seconds"
+                echo "Try starting it manually with 'ollama serve' in another terminal"
+                exit 1
+              fi
+              sleep 1
+              echo -n "."
+            done
+            echo ""
+          fi
+        fi
+        
+        echo "✓ Ollama server is running"
+        echo "Setting up Ollama models (may take a while)..."
+        ollama pull llama3.1 || { echo "Error pulling llama3.1 model"; exit 1; }
+        ollama pull nomic-embed-text || { echo "Error pulling nomic-embed-text model"; exit 1; }
+        echo "✓ Ollama models downloaded successfully"
+
+  install:deps:
     desc: Install Python dependencies
     silent: true
     cmds:
-      - pip install -r requirements.txt
+      - |
+        # Use venv if it exists
+        if [[ -f ".venv/bin/pip" ]]; then
+          echo "Using virtual environment for pip..."
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+        else
+          PYTHON=$(task detect:python)
+          PIP="${PYTHON} -m pip"
+          echo "Installing dependencies using $PYTHON..."
+          $PIP install --upgrade pip
+          $PIP install -r requirements.txt
+        fi
 
-  setup-ollama:
-    desc: Download and setup Ollama models
-    silent: true
+  setup:local:
+    desc: Complete local Python setup
     cmds:
-      - ollama pull llama3.1
-      - ollama pull nomic-embed-text
+      - task: check:dependencies
+      - task: setup:env
+      - task: setup:venv
+      - task: setup:ollama
+      - task: install:deps
+      - |
+        echo "✓ Local setup completed!"
+        echo "To start the chatbot: task start:local"
+        echo "Remember to edit your .env file with Firebolt credentials"
 
-  setup-local:
-    desc: Complete local setup (dependencies + Ollama models)
-    silent: true
+  setup:docker:
+    desc: Complete Docker-based setup
     cmds:
-      - task: install-deps
-      - task: setup-ollama
+      - task: check:dependencies
+        vars: { DOCKER: "true" }
+      - task: setup:env
+      - |
+        echo "Building Docker image..."
+        docker build -t rag_chatbot .
+        echo "✓ Docker setup completed!"
+        echo "To start the chatbot: task start:docker"
+        echo "Remember to edit your .env file with Firebolt credentials"
 
-  start-server:
-    desc: Start the RAG chatbot web server
-    silent: true
+  setup:
+    desc: Choose setup method (interactive)
+    interactive: true
     cmds:
-      - python web_server.py
+      - |
+        echo "Choose setup method:"
+        echo "1) Docker (recommended)"
+        echo "2) Local Python environment"
+        read -p "Enter choice (1 or 2): " choice
+        case $choice in
+          1) task setup:docker ;;
+          2) task setup:local ;;
+          *) echo "Invalid choice"; exit 1 ;;
+        esac
 
-  populate-table:
-    desc: Populate Firebolt table with documents
-    silent: true
+  start:local:
+    desc: Start the RAG chatbot using local Python
     cmds:
-      - python populate_table.py
+      - |
+        echo "Starting RAG chatbot web server..."
+        # Use venv if it exists
+        if [[ -f ".venv/bin/python" ]]; then
+          .venv/bin/python web_server.py
+        else
+          PYTHON=$(task detect:python)
+          $PYTHON web_server.py
+        fi
+
+  start:docker:
+    desc: Start the RAG chatbot using Docker
+    cmds:
+      - echo "Starting RAG chatbot containers..."
+      - docker compose up -d
+      - echo "✓ RAG chatbot started at http://localhost:5000"
+      - echo "To view logs:task docker:logs"
+
+  start:
+    desc: Start the RAG chatbot (auto-detect environment)
+    cmds:
+      - |
+        if command -v docker >/dev/null 2>&1 && docker image inspect rag_chatbot >/dev/null 2>&1; then
+          echo "Docker setup detected"
+          task start:docker
+        elif [[ -d ".venv" ]]; then
+          echo "Local Python setup detected"
+          task start:local
+        else
+          echo "Setup not detected. Run 'task setup' first."
+          exit 1
+        fi
 
   populate:
     desc: Populate Firebolt table with documents (Docker-aware)
-    silent: true
     cmds:
       - |
         if command -v docker >/dev/null 2>&1 && docker compose ps 2>/dev/null | grep -q "rag_chatbot.*Up"; then
           echo "Docker detected - running populate_table.py inside container..."
           docker compose exec -T rag_chatbot python -u populate_table.py
         else
-          echo "Docker not running - using local Python environment..."
-          python -u populate_table.py
+          echo "Local Python environment detected..."
+          if [[ -f ".venv/bin/python" ]]; then
+            .venv/bin/python -u populate_table.py
+          else
+            PYTHON=$(task detect:python)
+            $PYTHON -u populate_table.py
+          fi
         fi
 
-  docker-build:
+  docker:build:
     desc: Build Docker image
-    silent: true
     cmds:
+      - echo "Building Docker image..."
       - docker build -t rag_chatbot .
+      - echo "✓ Docker image built successfully"
 
-  docker-up:
-    desc: Start services with docker-compose
-    silent: true
+  docker:up:
+    desc: Start services with docker compose
     cmds:
-      - docker-compose up -d
+      - echo "Starting Docker containers..."
+      - docker compose up -d
+      - echo "✓ Containers started successfully"
 
-  docker-down:
-    desc: Stop services with docker-compose
-    silent: true
+  docker:down:
+    desc: Stop services with docker compose
     cmds:
-      - docker-compose down
+      - echo "Stopping Docker containers..."
+      - docker compose down
+      - echo "✓ Containers stopped successfully"
 
-  docker-logs:
-    desc: View docker-compose logs
-    silent: true
+  docker:logs:
+    desc: View docker compose logs
     cmds:
-      - docker-compose logs -f
+      - docker compose logs -f
 
   clean:
-    desc: Clean up Docker resources
-    silent: true
+    desc: Clean up project resources
     cmds:
-      - docker-compose down -v
-      - docker system prune -f
+      - |
+        echo "Cleaning up resources..."
+        if command -v docker >/dev/null 2>&1; then
+          echo "Cleaning Docker resources..."
+          docker compose down -v 2>/dev/null || true
+          docker system prune -f 2>/dev/null || true
+        fi
+        
+        echo "Removing virtual environment..."
+        rm -rf .venv 2>/dev/null || true
+        
+        echo "Removing __pycache__ directories..."
+        find . -type d -name "__pycache__" -exec rm -rf {} +
+        
+        echo "✓ Cleanup completed"
