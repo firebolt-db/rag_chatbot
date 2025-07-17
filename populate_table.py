@@ -134,7 +134,7 @@ if __name__ == '__main__':
         # Here, add or change chunking strategies by following the instructions in the README file
         chunking_strategies = [ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING] 
         
-        generate_embeddings_and_populate_table(repo_dict=repo_dict, batch_size=200,
+        generate_embeddings_and_populate_table(repo_dict=repo_dict, batch_size=150,
                                                chunking_strategies=chunking_strategies, 
                                                rcts_chunk_size = 300, rcts_chunk_overlap=50)
 
