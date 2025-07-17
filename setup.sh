@@ -53,21 +53,80 @@ EOF
 }
 
 check_python() {
+    if command -v pyenv &> /dev/null; then
+        PYENV_ROOT=$(pyenv root)
+        for version_dir in "$PYENV_ROOT"/versions/3.12*; do
+            if [[ -d "$version_dir" && -x "$version_dir/bin/python3.12" ]]; then
+                PYTHON_CMD="$version_dir/bin/python3.12"
+                print_success "Found Python 3.12 via pyenv: $PYTHON_CMD"
+                return 0
+            fi
+        done
+    fi
+    
     if command -v python3.12 &> /dev/null; then
-        PYTHON_CMD="python3.12"
-    elif command -v python3 &> /dev/null; then
+        if python3.12 --version &> /dev/null; then
+            PYTHON_CMD="python3.12"
+            print_success "Found Python 3.12: $PYTHON_CMD"
+            return 0
+        fi
+    fi
+    
+    if command -v pyenv &> /dev/null; then
+        PYENV_ROOT=$(pyenv root)
+        for version_dir in "$PYENV_ROOT"/versions/3.12*; do
+            if [[ -d "$version_dir" && -x "$version_dir/bin/python3.12" ]]; then
+                PYTHON_CMD="$version_dir/bin/python3.12"
+                print_success "Found Python 3.12 via pyenv: $PYTHON_CMD"
+                return 0
+            fi
+        done
+    fi
+    
+    if command -v asdf &> /dev/null; then
+        for version in $(asdf list python 2>/dev/null | grep "3\.12" | tr -d ' ' || true); do
+            if [[ -n "$version" ]]; then
+                ASDF_PYTHON_PATH=$(asdf where python "$version" 2>/dev/null)/bin/python3.12
+                if [[ -x "$ASDF_PYTHON_PATH" ]]; then
+                    PYTHON_CMD="$ASDF_PYTHON_PATH"
+                    print_success "Found Python 3.12 via asdf: $PYTHON_CMD"
+                    return 0
+                fi
+            fi
+        done
+    fi
+    
+    for brew_path in /opt/homebrew/bin/python3.12 /usr/local/bin/python3.12 /home/linuxbrew/.linuxbrew/bin/python3.12; do
+        if [[ -x "$brew_path" ]]; then
+            PYTHON_CMD="$brew_path"
+            print_success "Found Python 3.12 via brew: $PYTHON_CMD"
+            return 0
+        fi
+    done
+    
+    for sys_path in /usr/bin/python3.12 /usr/local/bin/python3.12; do
+        if [[ -x "$sys_path" ]]; then
+            PYTHON_CMD="$sys_path"
+            print_success "Found Python 3.12 in system: $PYTHON_CMD"
+            return 0
+        fi
+    done
+    
+    if command -v python3 &> /dev/null; then
         PYTHON_VERSION=$(python3 --version 2>&1 | grep -oP '\d+\.\d+')
         if [[ "$PYTHON_VERSION" == "3.12" ]]; then
             PYTHON_CMD="python3"
-        else
-            print_error "Python 3.12 is required but found Python $PYTHON_VERSION"
-            return 1
+            print_success "Found Python 3.12: $PYTHON_CMD"
+            return 0
         fi
-    else
-        print_error "Python 3.12 is not installed"
-        return 1
     fi
-    print_success "Found Python 3.12: $PYTHON_CMD"
+    
+    print_error "Python 3.12 is required but not found. Please install Python 3.12 using:"
+    print_error "  - pyenv: pyenv install 3.12.8"
+    print_error "  - asdf: asdf install python 3.12.8"
+    print_error "  - brew: brew install python@3.12"
+    print_error "  - or download from https://www.python.org/downloads/"
+    return 1
 }
 
 check_docker() {
@@ -112,7 +171,38 @@ check_ollama() {
 
 install_ollama() {
     print_status "Installing Ollama..."
-    curl -fsSL https://ollama.com/install.sh | sh
+    
+    OS=$(uname -s)
+    case "$OS" in
+        Darwin)
+            print_status "Detected macOS - using Homebrew installation"
+            if command -v brew &> /dev/null; then
+                brew install ollama
+                print_status "Starting Ollama as a background service..."
+                brew services start ollama
+                print_success "Ollama service started successfully"
+                print_status "Alternative manual start: OLLAMA_FLASH_ATTENTION=\"1\" OLLAMA_KV_CACHE_TYPE=\"q8_0\" /usr/local/opt/ollama/bin/ollama serve"
+            else
+                print_error "Homebrew not found. Please install Homebrew first:"
+                print_error "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                print_error "Then run: brew install ollama && brew services start ollama"
+                return 1
+            fi
+            ;;
+        Linux)
+            print_status "Detected Linux - using official installation script"
+            curl -fsSL https://ollama.com/install.sh | sh
+            ;;
+        *)
+            print_error "Unsupported operating system: $OS"
+            print_error "Please install Ollama manually:"
+            print_error "  - macOS: brew install ollama"
+            print_error "  - Linux: curl -fsSL https://ollama.com/install.sh | sh"
+            print_error "  - Windows: Download from https://ollama.com/download"
+            return 1
+            ;;
+    esac
+    
     print_success "Ollama installed successfully"
 }
 

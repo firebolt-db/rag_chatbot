@@ -101,7 +101,10 @@ docker compose exec rag_chatbot python populate_table.py
 # How to set up and use your chatbot
 1. Clone this GitHub repository to your local machine, and open the repository in Visual Studio Code
 3. In Visual Studio Code, create a `.venv` virtual environment to run this project in
-4. Download Ollama [here](https://ollama.com/download)
+4. Download and install Ollama:
+   - **macOS**: Run `brew install ollama && brew services start ollama` (or use the automated setup script)
+   - **Linux/Windows**: Download from [here](https://ollama.com/download)
+   - **Alternative macOS manual start**: `OLLAMA_FLASH_ATTENTION="1" OLLAMA_KV_CACHE_TYPE="q8_0" /usr/local/opt/ollama/bin/ollama serve`
 5. In your terminal, run `ollama pull llama3.1`. Then run `ollama pull nomic-embed-text`
 6. Activate the virtual environment. Inside the virtual environment, run the following command to install all the required libraries: 
 `pip install torch pydriller GitPython mistletoe bs4 langchain-community numpy langchain langchain-experimental nltk langchain-ollama uuid python-docx pandas langchain-core firebolt-sdk python-dotenv transformers flask`
