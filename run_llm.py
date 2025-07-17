@@ -15,6 +15,7 @@ from operator import itemgetter
 from langchain_core.runnables import RunnablePassthrough
 from vector_search import vector_search
 import os
+import time
 
 ChatOllama.model_rebuild()
 
@@ -51,6 +52,12 @@ Returns: the bot's response to the question
 def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "chat_history", chunking_strategy: str = "Semantic chunking", 
                 k: int = 10, similarity_metric: VectorSimilarityMetric = VectorSimilarityMetric.COSINE_SIMILARITY, 
                 print_vector_search: bool = False, is_customer: bool = True) -> str:
+        
+        request_start_time = time.time()
+        print(f"\n{'='*60}")
+        print(f"Processing chatbot request for session: {session_id}")
+        print(f"Question: {user_question}")
+        print(f"{'='*60}")
         
         filename = os.path.join(chat_history_dir, f"{CHAT_HISTORY_FILENAME}_{session_id}.txt") # chat history filename for this session
             
@@ -112,7 +119,8 @@ def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "ch
 
         config = {"configurable": {"session_id": session_id}}
 
-
+        print(f"\nPhase 1: Processing chat history...")
+        chat_history_start = time.time()
         # Write user message to chat history file, then read the whole chat history
         with open(filename, "a") as file:
             file.write(f"{CHAT_HISTORY_SEPARATOR}\nUser: {user_question}\n")
@@ -129,11 +137,18 @@ def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "ch
                 chat_history.add_user_message(HumanMessage(content=message.replace("User: ", "")))
             elif message.startswith("AI: "): # If it starts with "AI: ", it's an AI message
                 chat_history.add_ai_message(AIMessage(content=message.replace("AI: ", "")))
+        
+        chat_history_time = time.time() - chat_history_start
+        print(f"Phase 1 completed in {chat_history_time:.3f}s - processed {len(chat_history.messages)} messages")
 
 
+        print(f"\nPhase 2: Performing vector search...")
+        vector_search_start = time.time()
         # Get the context to pass into the prompt from vector search
         retrieved_chunks = vector_search(user_question, chunking_strategy=chunking_strategy, k=k, 
                                          similarity_metric=similarity_metric, is_customer=is_customer)
+        vector_search_time = time.time() - vector_search_start
+        print(f"Phase 2 completed in {vector_search_time:.3f}s - retrieved {len(retrieved_chunks)} chunks")
 
         context_string = "" # the chunks from the vector search that we'll pass into the model
 
@@ -149,13 +164,30 @@ def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "ch
                 print(chunk)
 
 
+        print(f"\nPhase 3: Generating LLM response...")
+        llm_start = time.time()
         # Get the model's response
         response = with_message_history.invoke({"messages": chat_history.messages, "question": user_question, "context": context_string}, 
                                                 config=config)
+        llm_time = time.time() - llm_start
+        print(f"Phase 3 completed in {llm_time:.3f}s - generated {len(response.content)} characters")
 
+        print(f"\nPhase 4: Saving response to chat history...")
+        save_start = time.time()
         # Write the LLM response to the chat history file
         with open(filename, "a") as file:
             file.write(f"{CHAT_HISTORY_SEPARATOR}\nAI: {response.content}\n")
+        save_time = time.time() - save_start
+        print(f"Phase 4 completed in {save_time:.3f}s")
+        
+        total_time = time.time() - request_start_time
+        print(f"\n{'='*60}")
+        print(f"Request completed in {total_time:.3f}s total")
+        print(f"  Chat history: {chat_history_time:.3f}s ({chat_history_time/total_time*100:.1f}%)")
+        print(f"  Vector search: {vector_search_time:.3f}s ({vector_search_time/total_time*100:.1f}%)")
+        print(f"  LLM response: {llm_time:.3f}s ({llm_time/total_time*100:.1f}%)")
+        print(f"  Save response: {save_time:.3f}s ({save_time/total_time*100:.1f}%)")
+        print(f"{'='*60}")
 
         return response.content
 

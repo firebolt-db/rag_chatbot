@@ -40,11 +40,10 @@ def existing_chatbot_session(session_id):
         
         # If it's a POST request, get the chatbot's response to the user's message
         else:
-            # get values from the form (there is only one value, the user message to the bot)
-            form_values = [val for val in request.form.values()] 
+            customer_message = request.form.get('user_message', '').strip()
             
-            customer_message = form_values[0]
-            
+            if not customer_message:
+                return render_template("error_page.html")
             """ Here, change the chunking_strategy argument by following the instructions in the README file. """
             llm_response = run_chatbot(user_question=customer_message, session_id=session_id, chat_history_dir = "chat_history", k=10,
                                         print_vector_search=True, chunking_strategy="Semantic chunking",

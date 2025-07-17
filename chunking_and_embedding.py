@@ -257,8 +257,13 @@ Returns: the embedding for that query
 """
 def embed_question(query: str) -> list[float]:
     ollama_emb = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
-
-    return ollama_emb.embed_query(query)
+    
+    embedding_start = time.time()
+    result = ollama_emb.embed_query(query)
+    embedding_time = time.time() - embedding_start
+    print(f"  Question embedding completed in {embedding_time:.3f}s")
+    
+    return result
 
 
 def save_embeddings_to_file(embeddings_dict: dict, file_path: str, format: str = "pickle") -> None:

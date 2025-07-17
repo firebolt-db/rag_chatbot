@@ -169,12 +169,20 @@ Returns: a nested list of the k most similar rows.
 def vector_search(question: str, k: int, chunking_strategy: str, 
                     similarity_metric: VectorSimilarityMetric, is_customer: bool = True) -> list[list]:
     
+    print(f"  Embedding user question...")
+    embedding_start = time.time()
     question_vector = embed_question(question) # Make an embedding of the question
+    embedding_time = time.time() - embedding_start
+    print(f"  Question embedding completed in {embedding_time:.3f}s")
 
     # Get Firebolt table name from settings
     table_name = settings.FIREBOLT_RAG_CHATBOT_TABLE_NAME    
-        
+    
+    print(f"  Connecting to Firebolt database...")
+    db_start = time.time()    
     connection, cursor = connect_to_firebolt()
+    connection_time = time.time() - db_start
+    print(f"  Database connection established in {connection_time:.3f}s")
     
     # Set the Firebolt function to call for the similarity metric
     if similarity_metric is VectorSimilarityMetric.COSINE_DISTANCE: 
@@ -210,8 +218,12 @@ def vector_search(question: str, k: int, chunking_strategy: str,
     if not is_customer:
         query = query.replace(f" AND {INTERNAL_ONLY_COL} = FALSE", "")
 
+    print(f"  Executing vector similarity query...")
+    query_start = time.time()
     cursor.execute(query)
     result = cursor.fetchall()
+    query_time = time.time() - query_start
+    print(f"  Query executed in {query_time:.3f}s - found {len(result)} results")
 
     cursor.close()
     connection.close()
