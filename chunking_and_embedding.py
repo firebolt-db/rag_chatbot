@@ -12,6 +12,10 @@ import re
 import nltk
 import time
 from datetime import date
+import json
+import pickle
+import pandas as pd
+from pathlib import Path
 from constants import *
 
 """
@@ -255,3 +259,99 @@ def embed_question(query: str) -> list[float]:
     ollama_emb = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
 
     return ollama_emb.embed_query(query)
+
+
+def save_embeddings_to_file(embeddings_dict: dict, file_path: str, format: str = "pickle") -> None:
+    """
+    Save embeddings dictionary to disk in the specified format.
+    
+    Parameters:
+        - embeddings_dict: Dictionary returned from embed_chunks()
+        - file_path: Path where to save the embeddings file
+        - format: File format - "pickle", "json", or "parquet"
+    """
+    try:
+        Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        if format.lower() == "pickle":
+            with open(file_path, 'wb') as f:
+                pickle.dump(embeddings_dict, f)
+        elif format.lower() == "json":
+            json_dict = copy.deepcopy(embeddings_dict)
+            if DATE_GENERATED_KEY in json_dict:
+                json_dict[DATE_GENERATED_KEY] = [str(d) for d in json_dict[DATE_GENERATED_KEY]]
+            with open(file_path, 'w') as f:
+                json.dump(json_dict, f, indent=2)
+        elif format.lower() == "parquet":
+            df = pd.DataFrame(embeddings_dict)
+            df.to_parquet(file_path, index=False)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+            
+        print(f"Embeddings saved to {file_path} in {format} format")
+        
+    except Exception as e:
+        print(f"Error saving embeddings to {file_path}: {e}")
+        raise
+
+
+def load_embeddings_from_file(file_path: str, format: str = "pickle") -> dict:
+    """
+    Load embeddings dictionary from disk.
+    
+    Parameters:
+        - file_path: Path to the embeddings file
+        - format: File format - "pickle", "json", or "parquet"
+        
+    Returns:
+        - Dictionary with embeddings and metadata
+    """
+    try:
+        if format.lower() == "pickle":
+            with open(file_path, 'rb') as f:
+                embeddings_dict = pickle.load(f)
+        elif format.lower() == "json":
+            with open(file_path, 'r') as f:
+                embeddings_dict = json.load(f)
+            if DATE_GENERATED_KEY in embeddings_dict:
+                from datetime import datetime
+                embeddings_dict[DATE_GENERATED_KEY] = [
+                    datetime.strptime(d, '%Y-%m-%d').date() if isinstance(d, str) else d 
+                    for d in embeddings_dict[DATE_GENERATED_KEY]
+                ]
+        elif format.lower() == "parquet":
+            df = pd.read_parquet(file_path)
+            embeddings_dict = df.to_dict('list')
+            if EMBEDDING_KEY in embeddings_dict:
+                embeddings_dict[EMBEDDING_KEY] = [
+                    emb.tolist() if hasattr(emb, 'tolist') else emb 
+                    for emb in embeddings_dict[EMBEDDING_KEY]
+                ]
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+            
+        print(f"Embeddings loaded from {file_path}")
+        return embeddings_dict
+        
+    except Exception as e:
+        print(f"Error loading embeddings from {file_path}: {e}")
+        raise
+
+
+def generate_embeddings_filename(repo_name: str, chunking_strategy: str, format: str = "pickle") -> str:
+    """
+    Generate a standardized filename for embeddings persistence.
+    
+    Parameters:
+        - repo_name: Name of the repository
+        - chunking_strategy: String representation of chunking strategy
+        - format: File format extension
+        
+    Returns:
+        - Filename string
+    """
+    clean_repo = re.sub(r'[^\w\-_]', '_', repo_name)
+    clean_strategy = re.sub(r'[^\w\-_]', '_', chunking_strategy.replace(' ', '_'))
+    
+    extension = {"pickle": "pkl", "json": "json", "parquet": "parquet"}.get(format.lower(), "pkl")
+    return f"embeddings_{clean_repo}_{clean_strategy}.{extension}"

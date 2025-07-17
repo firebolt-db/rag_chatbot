@@ -4,7 +4,7 @@ This file populates the Firebolt table with the documents you are using for RAG.
 
 from get_docs_and_versions import get_filepaths_in_local_repo, get_document_versions, get_document_texts_and_names
 from vector_search import populate_table
-from chunking_and_embedding import chunk_documents, embed_chunks, hash_list_of_strings
+from chunking_and_embedding import chunk_documents, embed_chunks, hash_list_of_strings, save_embeddings_to_file, load_embeddings_from_file, generate_embeddings_filename
 from constants import *
 import os
 import time
@@ -32,12 +32,17 @@ Parameters:
     - num_words_per_chunk: The number of words in each chunk. Will be used if chunking_strategies contains ChunkingStrategy.EVERY_N_WORDS
     - num_sentences_per_chunk: The number of sentences per chunk when chunking by sentences with a sliding window. 
                                Will be used if chunking_strategies contains ChunkingStrategy.BY_SENTENCE_WITH_SLIDING_WINDOW
+    - persist_embeddings: Whether to save embeddings to disk after generation and load them on retry (default: False)
+    - embeddings_format: Format for persisting embeddings - "pickle", "json", or "parquet" (default: "pickle")
+    - embeddings_dir: Directory to store cached embeddings files (default: "embeddings_cache")
 
 Returns: nothing
 """
 def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies: list[ChunkingStrategy], batch_size: int = 100,
                                             rcts_chunk_size: int = 600, rcts_chunk_overlap: int = 125, 
-                                            num_words_per_chunk: int = 100, num_sentences_per_chunk: int = 3) -> None:
+                                            num_words_per_chunk: int = 100, num_sentences_per_chunk: int = 3,
+                                            persist_embeddings: bool = False, embeddings_format: str = "pickle",
+                                            embeddings_dir: str = "embeddings_cache") -> None:
         repo_paths = repo_dict[REPO_PATHS_KEY]
         main_branches = repo_dict[MAIN_BRANCH_KEY]
         internal_only_statuses = repo_dict[INTERNAL_ONLY_KEY]
@@ -99,9 +104,28 @@ def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies:
 
                 print(f"\nPhase 3: Generating embeddings...")
                 embedding_start = time.time()
-                embeddings_dict = embed_chunks(chunk_dictionary) # Get the embeddings
-                embedding_time = time.time() - embedding_start
-                print(f"Phase 3 completed in {embedding_time:.1f}s")
+                
+                if persist_embeddings:
+                    chunking_strategy_str = chunking_strategy.name.lower().replace('_', '-')
+                    embeddings_filename = generate_embeddings_filename(repo_name, chunking_strategy_str, embeddings_format)
+                    embeddings_file_path = os.path.join(embeddings_dir, embeddings_filename)
+                    
+                    if os.path.exists(embeddings_file_path):
+                        print(f"Loading existing embeddings from {embeddings_file_path}...")
+                        embeddings_dict = load_embeddings_from_file(embeddings_file_path, embeddings_format)
+                        print(f"Successfully loaded {len(embeddings_dict.get(CHUNK_CONTENT_KEY, []))} cached embeddings")
+                        embedding_time = time.time() - embedding_start
+                        print(f"Phase 3 completed in {embedding_time:.1f}s (loaded from cache)")
+                    else:
+                        print("No cached embeddings found, generating new embeddings...")
+                        embeddings_dict = embed_chunks(chunk_dictionary)
+                        save_embeddings_to_file(embeddings_dict, embeddings_file_path, embeddings_format)
+                        embedding_time = time.time() - embedding_start
+                        print(f"Phase 3 completed in {embedding_time:.1f}s")
+                else:
+                    embeddings_dict = embed_chunks(chunk_dictionary)
+                    embedding_time = time.time() - embedding_start
+                    print(f"Phase 3 completed in {embedding_time:.1f}s")
                 
                 print(f"\nPhase 4: Populating database...")
                 db_start = time.time()
@@ -136,7 +160,9 @@ if __name__ == '__main__':
         
         generate_embeddings_and_populate_table(repo_dict=repo_dict, batch_size=150,
                                                chunking_strategies=chunking_strategies, 
-                                               rcts_chunk_size = 300, rcts_chunk_overlap=50)
+                                               rcts_chunk_size = 300, rcts_chunk_overlap=50,
+                                               persist_embeddings=True, embeddings_format="parquet",
+                                               embeddings_dir="embeddings_cache")
 
 
 
