@@ -3,8 +3,8 @@ This file populates the Firebolt table with the documents you are using for RAG.
 """
 
 from get_docs_and_versions import get_filepaths_in_local_repo, get_document_versions, get_document_texts_and_names
-from vector_search import populate_table
-from chunking_and_embedding import chunk_documents, embed_chunks, hash_list_of_strings, save_embeddings_to_file, load_embeddings_from_file, generate_embeddings_filename
+from vector_search import populate_table, connect_to_firebolt
+from chunking_and_embedding import chunk_documents, embed_chunks, hash_list_of_strings, save_embeddings_to_file, load_embeddings_from_file, generate_embeddings_filename, generate_chunking_strategy_string
 from constants import *
 import os
 import time
@@ -39,16 +39,71 @@ Parameters:
 Returns: nothing
 """
 def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies: list[ChunkingStrategy], batch_size: int = 100,
-                                            rcts_chunk_size: int = 600, rcts_chunk_overlap: int = 125, 
-                                            num_words_per_chunk: int = 100, num_sentences_per_chunk: int = 3,
+                                            rcts_chunk_size: int = None, rcts_chunk_overlap: int = None, 
+                                            num_words_per_chunk: int = None, num_sentences_per_chunk: int = None,
                                             persist_embeddings: bool = False, embeddings_format: str = "pickle",
                                             embeddings_dir: str = "embeddings_cache") -> None:
+        if rcts_chunk_size is None:
+            rcts_chunk_size = settings.FIREBOLT_RAG_CHATBOT_CHUNK_SIZE
+        if rcts_chunk_overlap is None:
+            rcts_chunk_overlap = settings.FIREBOLT_RAG_CHATBOT_CHUNK_OVERLAP
+        if num_words_per_chunk is None:
+            num_words_per_chunk = settings.FIREBOLT_RAG_CHATBOT_NUM_WORDS_PER_CHUNK
+        if num_sentences_per_chunk is None:
+            num_sentences_per_chunk = settings.FIREBOLT_RAG_CHATBOT_NUM_SENTENCES_PER_CHUNK
+
         repo_paths = repo_dict[REPO_PATHS_KEY]
         main_branches = repo_dict[MAIN_BRANCH_KEY]
         internal_only_statuses = repo_dict[INTERNAL_ONLY_KEY]
 
         # Get Firebolt table name from settings
         table_name = settings.FIREBOLT_RAG_CHATBOT_TABLE_NAME    
+        
+        print(f"\nValidating chunking strategy consistency...")
+        validation_start = time.time()
+        
+        for strategy in chunking_strategies:
+            current_strategy_string = generate_chunking_strategy_string(
+                strategy, rcts_chunk_size, rcts_chunk_overlap, 
+                num_words_per_chunk, num_sentences_per_chunk
+            )
+            
+            try:
+                connection, cursor = connect_to_firebolt()
+                cursor.execute(f"SELECT DISTINCT {CHUNKING_STRATEGY_COL} FROM {table_name}")
+                existing_strategies = cursor.fetchall()
+                cursor.close()
+                connection.close()
+                
+                if existing_strategies:
+                    existing_strategy_strings = [row[0] for row in existing_strategies]
+                    if current_strategy_string not in existing_strategy_strings:
+                        print(f"\n⚠️  WARNING: Chunking strategy mismatch detected!")
+                        print(f"Current strategy: '{current_strategy_string}'")
+                        print(f"Existing strategies in database: {existing_strategy_strings}")
+                        print(f"\nMixing different chunking strategies will break retrieval accuracy.")
+                        print(f"Consider:")
+                        print(f"  1. Use the same strategy as existing embeddings")
+                        print(f"  2. Clear the database and repopulate with new strategy")
+                        print(f"  3. Use a different table for the new strategy")
+                        
+                        response = input(f"\nContinue anyway? (y/N): ").strip().lower()
+                        if response != 'y' and response != 'yes':
+                            print(f"Aborting population to prevent strategy mismatch.")
+                            return
+                        else:
+                            print(f"Continuing with mixed strategies (not recommended)...")
+                    else:
+                        print(f"✓ Strategy '{current_strategy_string}' matches existing embeddings")
+                else:
+                    print(f"✓ No existing embeddings found, proceeding with strategy '{current_strategy_string}'")
+                    
+            except Exception as e:
+                print(f"⚠️  Could not validate chunking strategy (table may not exist yet): {e}")
+                print(f"Proceeding with strategy '{current_strategy_string}'")
+        
+        validation_time = time.time() - validation_start
+        print(f"Validation completed in {validation_time:.1f}s")
         
         for i in range(len(repo_paths)):
             repo_path = repo_paths[i]
@@ -137,6 +192,31 @@ def generate_embeddings_and_populate_table(repo_dict: dict, chunking_strategies:
                 print(f"\nStrategy {strategy_num} completed in {total_time:.1f}s total")
 
 
+def get_chunking_strategy_from_env() -> ChunkingStrategy:
+    """
+    Maps environment variable string to ChunkingStrategy enum.
+    
+    Returns: ChunkingStrategy enum value based on environment configuration
+    """
+    strategy_name = settings.FIREBOLT_RAG_CHATBOT_CHUNKING_STRATEGY.upper()
+    
+    if strategy_name == "RECURSIVE_CHARACTER_TEXT_SPLITTING":
+        return ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING
+    elif strategy_name == "SEMANTIC_CHUNKING":
+        return ChunkingStrategy.SEMANTIC_CHUNKING
+    elif strategy_name == "BY_PARAGRAPH":
+        return ChunkingStrategy.BY_PARAGRAPH
+    elif strategy_name == "BY_SENTENCE":
+        return ChunkingStrategy.BY_SENTENCE
+    elif strategy_name == "BY_SENTENCE_WITH_SLIDING_WINDOW":
+        return ChunkingStrategy.BY_SENTENCE_WITH_SLIDING_WINDOW
+    elif strategy_name == "EVERY_N_WORDS":
+        return ChunkingStrategy.EVERY_N_WORDS
+    else:
+        print(f"Warning: Unknown chunking strategy '{strategy_name}', defaulting to RECURSIVE_CHARACTER_TEXT_SPLITTING")
+        return ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING
+
+
 if __name__ == '__main__':
 
         """ This dictionary contains information about the repos containing the documents you want to use for RAG.
@@ -155,14 +235,21 @@ if __name__ == '__main__':
                      MAIN_BRANCH_KEY: ["main"],
                      INTERNAL_ONLY_KEY: [False]}
         
-        # Here, add or change chunking strategies by following the instructions in the README file
-        chunking_strategies = [ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING] 
+        chunking_strategy = get_chunking_strategy_from_env()
+        chunking_strategies = [chunking_strategy]
         
-        generate_embeddings_and_populate_table(repo_dict=repo_dict, batch_size=150,
-                                               chunking_strategies=chunking_strategies, 
-                                               rcts_chunk_size = 300, rcts_chunk_overlap=50,
-                                               persist_embeddings=True, embeddings_format="parquet",
-                                               embeddings_dir="embeddings_cache")
+        generate_embeddings_and_populate_table(
+            repo_dict=repo_dict, 
+            batch_size=settings.FIREBOLT_RAG_CHATBOT_BATCH_SIZE,
+            chunking_strategies=chunking_strategies, 
+            rcts_chunk_size=settings.FIREBOLT_RAG_CHATBOT_CHUNK_SIZE, 
+            rcts_chunk_overlap=settings.FIREBOLT_RAG_CHATBOT_CHUNK_OVERLAP,
+            num_words_per_chunk=settings.FIREBOLT_RAG_CHATBOT_NUM_WORDS_PER_CHUNK,
+            num_sentences_per_chunk=settings.FIREBOLT_RAG_CHATBOT_NUM_SENTENCES_PER_CHUNK,
+            persist_embeddings=True, 
+            embeddings_format="parquet",
+            embeddings_dir="embeddings_cache"
+        )
 
 
 

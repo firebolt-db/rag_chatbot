@@ -57,12 +57,31 @@ def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "ch
         request_start_time = time.time()
         
         if chunking_strategy is None:
-            chunking_strategy = settings.FIREBOLT_RAG_CHATBOT_CHUNKING_STRATEGY
-        print(f"\n{'='*60}")
-        print(f"Processing chatbot request for session: {session_id}")
-        print(f"Question: {user_question}")
-        print(f"{'='*60}")
-        
+            from chunking_and_embedding import generate_chunking_strategy_string
+            from constants import ChunkingStrategy
+            
+            strategy_name = settings.FIREBOLT_RAG_CHATBOT_CHUNKING_STRATEGY.upper()
+            if strategy_name == "RECURSIVE_CHARACTER_TEXT_SPLITTING":
+                strategy_enum = ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING
+            elif strategy_name == "SEMANTIC_CHUNKING":
+                strategy_enum = ChunkingStrategy.SEMANTIC_CHUNKING
+            elif strategy_name == "BY_PARAGRAPH":
+                strategy_enum = ChunkingStrategy.BY_PARAGRAPH
+            elif strategy_name == "BY_SENTENCE":
+                strategy_enum = ChunkingStrategy.BY_SENTENCE
+            elif strategy_name == "BY_SENTENCE_WITH_SLIDING_WINDOW":
+                strategy_enum = ChunkingStrategy.BY_SENTENCE_WITH_SLIDING_WINDOW
+            elif strategy_name == "EVERY_N_WORDS":
+                strategy_enum = ChunkingStrategy.EVERY_N_WORDS
+            else:
+                strategy_enum = ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING  # default
+            
+            chunking_strategy = generate_chunking_strategy_string(strategy_enum)
+        print(f"\n{'='*60}", flush=True)
+        print(f"Processing chatbot request for session: {session_id}", flush=True)
+        print(f"Question: {user_question}", flush=True)
+        print(f"{'='*60}", flush=True)
+
         filename = os.path.join(chat_history_dir, f"{CHAT_HISTORY_FILENAME}_{session_id}.txt") # chat history filename for this session
             
         # Create the directory if it doesn't exist
@@ -123,7 +142,7 @@ def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "ch
 
         config = {"configurable": {"session_id": session_id}}
 
-        print(f"\nPhase 1: Processing chat history...")
+        print(f"\nPhase 1: Processing chat history...", flush=True)
         chat_history_start = time.time()
         # Write user message to chat history file, then read the whole chat history
         with open(filename, "a") as file:
@@ -143,55 +162,54 @@ def run_chatbot(user_question: str, session_id: str, chat_history_dir: str = "ch
                 chat_history.add_ai_message(AIMessage(content=message.replace("AI: ", "")))
         
         chat_history_time = time.time() - chat_history_start
-        print(f"Phase 1 completed in {chat_history_time:.3f}s - processed {len(chat_history.messages)} messages")
+        print(f"Phase 1 completed in {chat_history_time:.3f}s - processed {len(chat_history.messages)} messages", flush=True)
 
 
-        print(f"\nPhase 2: Performing vector search...")
+        print(f"\nPhase 2: Performing vector search...", flush=True)
         vector_search_start = time.time()
         # Get the context to pass into the prompt from vector search
         retrieved_chunks = vector_search(user_question, chunking_strategy=chunking_strategy, k=k, 
                                          similarity_metric=similarity_metric, is_customer=is_customer)
         vector_search_time = time.time() - vector_search_start
-        print(f"Phase 2 completed in {vector_search_time:.3f}s - retrieved {len(retrieved_chunks)} chunks")
+        print(f"Phase 2 completed in {vector_search_time:.3f}s - retrieved {len(retrieved_chunks)} chunks", flush=True)
 
         context_string = "" # the chunks from the vector search that we'll pass into the model
 
         if print_vector_search:
-            print(f"\n\nVECTOR SEARCH RESULTS:")
+            print(f"\n\nVECTOR SEARCH RESULTS:", flush=True)
 
         for i in range(len(retrieved_chunks)): 
             chunk, similarity, doc_name = retrieved_chunks[i]
             context_string += (chunk + "\n\n")
 
             if print_vector_search:
-                print(f"\n\n{'-'*20} Result #{i+1} | Document name: {doc_name} | Similarity: {round(similarity, 3)} {'-'*20}\n\n")
-                print(chunk)
+                print(f"\n\n{'-'*20} Result #{i+1} | Document name: {doc_name} | Similarity: {round(similarity, 3)} {'-'*20}\n\n", flush=True)
+                print(chunk, flush=True)
 
 
-        print(f"\nPhase 3: Generating LLM response...")
+        print(f"\nPhase 3: Generating LLM response...", flush=True)
         llm_start = time.time()
         # Get the model's response
         response = with_message_history.invoke({"messages": chat_history.messages, "question": user_question, "context": context_string}, 
                                                 config=config)
         llm_time = time.time() - llm_start
-        print(f"Phase 3 completed in {llm_time:.3f}s - generated {len(response.content)} characters")
+        print(f"Phase 3 completed in {llm_time:.3f}s - generated {len(response.content)} characters", flush=True)
 
-        print(f"\nPhase 4: Saving response to chat history...")
+        print(f"\nPhase 4: Saving response to chat history...", flush=True)
         save_start = time.time()
         # Write the LLM response to the chat history file
         with open(filename, "a") as file:
             file.write(f"{CHAT_HISTORY_SEPARATOR}\nAI: {response.content}\n")
         save_time = time.time() - save_start
-        print(f"Phase 4 completed in {save_time:.3f}s")
-        
+        print(f"Phase 4 completed in {save_time:.3f}s", flush=True)
+
         total_time = time.time() - request_start_time
-        print(f"\n{'='*60}")
-        print(f"Request completed in {total_time:.3f}s total")
-        print(f"  Chat history: {chat_history_time:.3f}s ({chat_history_time/total_time*100:.1f}%)")
-        print(f"  Vector search: {vector_search_time:.3f}s ({vector_search_time/total_time*100:.1f}%)")
-        print(f"  LLM response: {llm_time:.3f}s ({llm_time/total_time*100:.1f}%)")
-        print(f"  Save response: {save_time:.3f}s ({save_time/total_time*100:.1f}%)")
-        print(f"{'='*60}")
+        print(f"\n{'='*60}", flush=True)
+        print(f"Request completed in {total_time:.3f}s total", flush=True)
+        print(f"  Chat history: {chat_history_time:.3f}s ({chat_history_time/total_time*100:.1f}%)", flush=True)
+        print(f"  Vector search: {vector_search_time:.3f}s ({vector_search_time/total_time*100:.1f}%)", flush=True)
+        print(f"  LLM response: {llm_time:.3f}s ({llm_time/total_time*100:.1f}%)", flush=True)
+        print(f"  Save response: {save_time:.3f}s ({save_time/total_time*100:.1f}%)", flush=True)
+        print(f"{'='*60}", flush=True)
 
         return response.content
-

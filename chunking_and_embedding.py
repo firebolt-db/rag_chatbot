@@ -17,6 +17,48 @@ import pickle
 import pandas as pd
 from pathlib import Path
 from constants import *
+import settings
+
+"""
+Generates a consistent chunking strategy string from environment variables.
+This ensures round-trip integrity between insertion and retrieval phases.
+
+Parameters:
+    - chunking_strategy: ChunkingStrategy enum value
+    - chunk_size: chunk size for recursive character text splitting (optional)
+    - chunk_overlap: chunk overlap for recursive character text splitting (optional)
+    - num_words_per_chunk: number of words per chunk for EVERY_N_WORDS strategy (optional)
+    - num_sentences_per_chunk: number of sentences per chunk for sliding window strategy (optional)
+
+Returns: standardized chunking strategy string for database storage
+"""
+def generate_chunking_strategy_string(chunking_strategy: ChunkingStrategy, 
+                                    chunk_size: int = None, 
+                                    chunk_overlap: int = None,
+                                    num_words_per_chunk: int = None,
+                                    num_sentences_per_chunk: int = None) -> str:
+    
+    if chunk_size is None:
+        chunk_size = settings.FIREBOLT_RAG_CHATBOT_CHUNK_SIZE
+    if chunk_overlap is None:
+        chunk_overlap = settings.FIREBOLT_RAG_CHATBOT_CHUNK_OVERLAP
+    if num_words_per_chunk is None:
+        num_words_per_chunk = settings.FIREBOLT_RAG_CHATBOT_NUM_WORDS_PER_CHUNK
+    if num_sentences_per_chunk is None:
+        num_sentences_per_chunk = settings.FIREBOLT_RAG_CHATBOT_NUM_SENTENCES_PER_CHUNK
+    
+    if chunking_strategy is ChunkingStrategy.BY_PARAGRAPH:
+        return "By paragraph"
+    elif chunking_strategy is ChunkingStrategy.BY_SENTENCE:
+        return "By sentence"
+    elif chunking_strategy is ChunkingStrategy.BY_SENTENCE_WITH_SLIDING_WINDOW:
+        return f"By {num_sentences_per_chunk} sentences with a sliding window"
+    elif chunking_strategy is ChunkingStrategy.EVERY_N_WORDS:
+        return f"Every {num_words_per_chunk} words"
+    elif chunking_strategy is ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING:
+        return f"Recursive character text splitting with chunk size = {chunk_size} and chunk overlap = {chunk_overlap}"
+    else:
+        return "Semantic chunking"
 
 """
 Hashes each string in a list of strings.
@@ -87,8 +129,17 @@ Returns:
 """
 
 def chunk_documents(document_dictionary: dict, chunking_strategy: ChunkingStrategy = ChunkingStrategy.EVERY_N_WORDS, 
-                    rcts_chunk_size: int = 600, rcts_chunk_overlap: int = 125, 
-                    num_words_per_chunk: int = 100, num_sentences_per_chunk: int = 3) -> dict:
+                    rcts_chunk_size: int = None, rcts_chunk_overlap: int = None, 
+                    num_words_per_chunk: int = None, num_sentences_per_chunk: int = None) -> dict:
+
+    if rcts_chunk_size is None:
+        rcts_chunk_size = settings.FIREBOLT_RAG_CHATBOT_CHUNK_SIZE
+    if rcts_chunk_overlap is None:
+        rcts_chunk_overlap = settings.FIREBOLT_RAG_CHATBOT_CHUNK_OVERLAP
+    if num_words_per_chunk is None:
+        num_words_per_chunk = settings.FIREBOLT_RAG_CHATBOT_NUM_WORDS_PER_CHUNK
+    if num_sentences_per_chunk is None:
+        num_sentences_per_chunk = settings.FIREBOLT_RAG_CHATBOT_NUM_SENTENCES_PER_CHUNK
 
     document_ids = document_dictionary[DOC_ID_KEY]
     document_texts = document_dictionary[DOC_TEXTS_KEY]
@@ -101,7 +152,11 @@ def chunk_documents(document_dictionary: dict, chunking_strategy: ChunkingStrate
       
     # Dictionary that stores the necessary info for each chunk
     chunk_dictionary = {DOC_ID_KEY:[], DOC_VERSION_KEY:[], DOC_NAME_KEY:[], CHUNK_CONTENT_KEY:[], INTERNAL_ONLY_KEY:[]} 
-    chunking_strategy_string = "" # the string to store in the FB table for the chunking strategy
+    
+    chunking_strategy_string = generate_chunking_strategy_string(
+        chunking_strategy, rcts_chunk_size, rcts_chunk_overlap, 
+        num_words_per_chunk, num_sentences_per_chunk
+    )
 
     for i in range(len(document_ids)):
         if i % 10 == 0 or i == len(document_ids) - 1:
@@ -114,28 +169,19 @@ def chunk_documents(document_dictionary: dict, chunking_strategy: ChunkingStrate
 
         # Chunk by the provided chunking strategy
         if chunking_strategy is ChunkingStrategy.BY_PARAGRAPH:
-            # split into paragraphs whenever there are at least 2 newlines in the text
             current_document_chunks = re.split(r'\n{2,}', document_text) 
-
-            # this variable is the string that is stored in the FB table for the chunking strategy
-            chunking_strategy_string = "By paragraph" 
         elif chunking_strategy is ChunkingStrategy.BY_SENTENCE:
             current_document_chunks = split_text_into_sentences(document_text)
-            chunking_strategy_string = "By sentence"
         elif chunking_strategy is ChunkingStrategy.BY_SENTENCE_WITH_SLIDING_WINDOW:
             current_document_chunks = chunk_by_sentences_with_sliding_window(document_text, chunk_size=num_sentences_per_chunk)
-            chunking_strategy_string = f"By {num_sentences_per_chunk} sentences with a sliding window"
         elif chunking_strategy is ChunkingStrategy.EVERY_N_WORDS:
             current_document_chunks = split_text_every_n_words(document_text, num_words_per_chunk)
-            chunking_strategy_string = f"Every {num_words_per_chunk} words"
         elif chunking_strategy is ChunkingStrategy.RECURSIVE_CHARACTER_TEXT_SPLITTING:
             text_splitter = RecursiveCharacterTextSplitter(chunk_size=rcts_chunk_size, chunk_overlap=rcts_chunk_overlap)    
             current_document_chunks = text_splitter.split_text(document_text)
-            chunking_strategy_string = f"Recursive character text splitting with chunk size = {rcts_chunk_size} and chunk overlap = {rcts_chunk_overlap}"
-        else: # if chunking_strategy is ChunkingStrategy.SEMANTIC_CHUNKING
+        else:
             text_splitter = SemanticChunker(OllamaEmbeddings(model=EMBEDDING_MODEL_NAME))
-            current_document_chunks = text_splitter.split_text(document_text) 
-            chunking_strategy_string = "Semantic chunking"
+            current_document_chunks = text_splitter.split_text(document_text)
 
         num_of_chunks = len(current_document_chunks)
 

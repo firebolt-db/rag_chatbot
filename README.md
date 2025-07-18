@@ -62,8 +62,9 @@ task start-server
 
 ## Configuration
 1. Copy `.env.example` to `.env` and fill in your Firebolt credentials
-2. Update the GitHub repository paths in your `.env` file
+2. Update the GitHub repository paths and chunking strategy configuration in your `.env` file
 3. Run `task populate` or `python populate_table.py` to populate your vector database
+4. The system automatically ensures chunking strategy consistency across embedding generation and retrieval
 
 ### Docker Setup for populate_table.py
 When using Docker, you can populate the table using the following methods:
@@ -155,8 +156,9 @@ If you prefer to set up manually:
 
 1. **Environment Variables**:
    - Copy `.env.example` to `.env`
-   - Fill in the required Firebolt credentials:
+   - Fill in the required Firebolt credentials and configuration:
      ```
+     # Firebolt Database Configuration
      FIREBOLT_RAG_CHATBOT_CLIENT_ID=<your-service-account-id>
      FIREBOLT_RAG_CHATBOT_CLIENT_SECRET=<your-service-account-secret>
      FIREBOLT_RAG_CHATBOT_ENGINE=<your-engine-name>
@@ -164,20 +166,40 @@ If you prefer to set up manually:
      FIREBOLT_RAG_CHATBOT_ACCOUNT_NAME=<your-account-name>
      FIREBOLT_RAG_CHATBOT_TABLE_NAME=<your-table-name>
      FIREBOLT_RAG_CHATBOT_LOCAL_GITHUB_PATH=<path-to-your-github-repos>
+     
+     # Chunking Strategy Configuration (Environment-Driven)
+     FIREBOLT_RAG_CHATBOT_CHUNKING_STRATEGY=recursive_character_text_splitting
+     FIREBOLT_RAG_CHATBOT_CHUNK_SIZE=300
+     FIREBOLT_RAG_CHATBOT_CHUNK_OVERLAP=50
+     FIREBOLT_RAG_CHATBOT_NUM_WORDS_PER_CHUNK=100
+     FIREBOLT_RAG_CHATBOT_NUM_SENTENCES_PER_CHUNK=3
+     FIREBOLT_RAG_CHATBOT_BATCH_SIZE=150
      ```
+   
+   **Chunking Strategy Options:**
+   - `recursive_character_text_splitting` (recommended)
+   - `semantic_chunking`
+   - `by_paragraph`
+   - `by_sentence`
+   - `by_sentence_with_sliding_window`
+   - `every_n_words`
 
 2. **Prepare Documents for RAG**:
    - Clone your document repositories locally
    - Update `repo_dict` in `populate_table.py` with your repositories
+   - Configure chunking strategy and parameters via environment variables (no code changes needed)
    - Optionally, add file names to `DISALLOWED_FILENAMES` in `constants.py` to exclude them
 
 3. **Populate the Vector Database**:
+   - The script automatically validates chunking strategy consistency to prevent embedding mismatches
    - For local setup: `python populate_table.py`
    - For Docker setup: `task populate` or `docker compose exec rag_chatbot python populate_table.py`
+   - **Important**: The system will warn you if changing chunking strategies on existing embeddings
 
 4. **Customize the Chatbot**:
    - Modify the prompt in `run_chatbot()` function in `run_llm.py` to suit your use case
-   - In `web_server.py`, update the `chunking_strategy` parameter based on your preferred strategy
+   - Configure chunking strategy and parameters via environment variables in your `.env` file
+   - The system automatically ensures consistency between embedding generation and retrieval phases
 
 ## Running the Chatbot
 
@@ -199,6 +221,12 @@ Access the web UI at [http://127.0.0.1:5000](http://127.0.0.1:5000)
 - **Supported Formats**: Only `.docx`, `.txt`, and `.md` files are processed
 - **Character Issues**: Null characters and certain Unicode values may cause errors in Firebolt tables
 - **Markdown Syntax**: Ensure all Markdown files have valid syntax to prevent errors
+
+### Chunking Strategy Configuration
+- **Environment-Driven**: All chunking parameters are configurable via environment variables
+- **Consistency Validation**: The system automatically validates chunking strategy consistency before processing
+- **No Code Changes**: Switch between chunking strategies by updating your `.env` file only
+- **Strategy Mismatch Warning**: The system warns when attempting to mix different chunking strategies in the same database
 
 ### User Access Control
 To toggle between internal/external user access:
