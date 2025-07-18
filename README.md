@@ -235,4 +235,4 @@ To toggle between internal/external user access:
 
 ## Example Dataset
 
-We have provided an example dataset that you can use to build your chatbot! You can find the dataset at [this GitHub repository](https://github.com/firebolt-analytics/rag_dataset), which contains documentation for HuggingFace Transformers.
+We have provided an example dataset that you can use to build your chatbot! You can find the dataset at [this GitHub repository](https://github.com/firebolt-db/rag_dataset), which contains documentation for HuggingFace Transformers.
